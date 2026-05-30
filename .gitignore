@@ -1,0 +1,58 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+log/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Go backend
+backend/bin/
+backend/.gocache/
+backend/coverage.out
+backend/*.test
+backend/tmp/
+
+# Node/frontend
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+frontend/build/
+frontend/coverage/
+frontend/.turbo/
+frontend/.vite/
+
+# Erlang/rebar agent
+pulse_agent/.rebar3/
+pulse_agent/_build/
+pulse_agent/_checkouts/
+pulse_agent/_vendor/
+pulse_agent/.eunit/
+pulse_agent/ebin/
+pulse_agent/*.beam
+pulse_agent/*.o
+pulse_agent/*.plt
+pulse_agent/.erlang.cookie
+pulse_agent/erl_crash.dump
+pulse_agent/.rebar
+pulse_agent/rebar3.crashdump
+
+# Docker/local volumes
+.docker/
+docker-data/
+volumes/
+
+# Temporary files
+tmp/
+temp/
