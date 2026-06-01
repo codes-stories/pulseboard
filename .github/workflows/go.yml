@@ -1,28 +1,57 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+# Backend pull request checks.
+#
+# Enforced by this workflow:
+# - PRs must target main.
+# - Go code must be formatted.
+# - go.mod and go.sum must be tidy.
+# - Go code must compile.
+# - Backend tests must pass.
+#
+# Enforce these in GitHub branch protection settings for main:
+# - Require at least 1 approval before merging.
+# - Require branches to be up to date before merging.
+# - Require this status check to pass before merging.
 
-name: Go
+name: Go Backend CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-
-  build:
+  backend-checks:
+    name: Backend checks
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.20'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
 
-    - name: Build
-      run: go build -v ./...
+      - name: Download dependencies
+        run: go mod download
 
-    - name: Test
-      run: go test -v ./...
+      - name: Check Go formatting
+        run: test -z "$(gofmt -l .)"
+
+      - name: Check go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Build backend
+        run: go build -v ./...
+
+      - name: Test backend
+        run: go test -v ./...
