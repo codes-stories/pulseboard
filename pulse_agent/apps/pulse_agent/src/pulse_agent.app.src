@@ -5,7 +5,9 @@
     {mod, {pulse_agent_app, []}},
     {applications, [
         kernel,
-        stdlib
+        stdlib,
+        inets,
+        ssl
     ]},
     {env, []},
     {modules, [pulse_agent_api, pulse_agent_app, pulse_agent_sup]},
