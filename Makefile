@@ -9,6 +9,8 @@ FRONTEND_DIR := frontend
 AGENT_DIR := pulse_agent
 MIGRATIONS_DIR := $(BACKEND_DIR)/migrations
 BACKEND_ENV := $(BACKEND_DIR)/.env
+GO_REQUIRED_VERSION := 1.26.3
+ERLANG_REQUIRED_VERSION := 24.0
 
 # Keep Go build/cache files inside the workspace so sandboxed runs and local
 # cleanup are predictable.
@@ -33,13 +35,28 @@ endif
 help: ## Show this help message.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nPulseboard commands:\n"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-.PHONY: run-server
-run-server: ## Start the Go API server from backend/cmd/api.
-	cd $(BACKEND_DIR) && GOCACHE=$(GOCACHE) go run ./cmd/api
+#################################################
+# Check for required Go version before running any Go-related tasks.
+.PHONY: check-go
+check-go-version:
+	@go version | grep -q "go$(GO_REQUIRED_VERSION)" || \
+	( echo "Error: Go $(GO_REQUIRED_VERSION) is required"; exit 1 )
 
+.PHONY: run-server
+run-server: check-go-version ## Start the Go API server from backend/cmd/api.
+	cd $(BACKEND_DIR) && GOCACHE=$(GOCACHE) go run ./cmd/api
+#################################################
+
+## Check for required Erlang version before running any Erlang-related tasks.
+.PHONY: check-erlang
+check-erlang-version:
+	@erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().' -noshell | grep -q "$(ERLANG_REQUIRED_VERSION)" || \
+	( echo "Error: Erlang/OTP $(ERLANG_REQUIRED_VERSION) is required"; exit 1 )
 .PHONY: run-agent
 run-agent: ## Compile and start the Erlang pulse agent shell.
-	cd $(AGENT_DIR) && rebar3 compile && rebar3 shell
+	check-erlang-version && cd $(AGENT_DIR) && rebar3 compile && rebar3 shell
+###################################################
+
 
 .PHONY: run-frontend
 run-frontend: ## Start the frontend dev server when the frontend directory exists.

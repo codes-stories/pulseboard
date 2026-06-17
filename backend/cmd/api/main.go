@@ -11,8 +11,8 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 
-	"github.com/gauravkrrr/pulseboard/backend/internal/config"
-	"github.com/gauravkrrr/pulseboard/backend/internal/database"
+	"github.com/gaurav/pulseboard/internal/config"
+	"github.com/gaurav/pulseboard/internal/databases"
 )
 
 func main() {
@@ -20,7 +20,18 @@ func main() {
 		log.Println("no .env file found, using environment variables")
 	}
 
-	addr := ":" + getEnv("PORT", "8080")
+	cfg := config.Load()
+	if cfg.DBURL != "" {
+		pool, err := database.NewPool(cfg.DBURL)
+		if err != nil {
+			log.Fatalf("database connection failed: %v", err)
+		}
+		defer pool.Close()
+	} else {
+		log.Println("DATABASE_URL not set, starting without database connection")
+	}
+
+	addr := ":" + fallback(cfg.Port, "8080")
 
 	server := &http.Server{
 		Addr:         addr,
@@ -44,7 +55,7 @@ func routes() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{getEnv("CORS_ALLOWED_ORIGIN", "http://localhost:3000")},
+		AllowedOrigins:   []string{fallback(os.Getenv("CORS_ALLOWED_ORIGIN"), "http://localhost:3000")},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -68,10 +79,9 @@ func routes() http.Handler {
 	return r
 }
 
-func getEnv(key string, fallback string) string {
-	value := os.Getenv(key)
+func fallback(value string, defaultValue string) string {
 	if value == "" {
-		return fallback
+		return defaultValue
 	}
 
 	return value

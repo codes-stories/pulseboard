@@ -1,0 +1,6 @@
+-sname pulse_agent
+
+-setcookie pulse_agent_cookie
+
++K true
++A30
