@@ -27,11 +27,20 @@ start_link() ->
 %%                  modules => modules()}   % optional
 init([]) ->
     SupFlags = #{
-        strategy => one_for_all,
-        intensity => 0,
-        period => 1
+        strategy => one_for_one,
+        intensity => 1,
+        period => 5
     },
-    ChildSpecs = [],
+    ChildSpecs = [
+        #{
+            id => pulse_agent_api,
+            start => {pulse_agent_api, start_link, []},
+            restart => permanent,
+            shutdown => 5000,
+            type => worker,
+            modules => [pulse_agent_api]
+        }
+    ],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions
