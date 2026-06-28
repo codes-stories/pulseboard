@@ -4,7 +4,7 @@ import "github.com/jackc/pgx/v5/pgxpool"
 
 type Module struct {
 	repository *Repository
-	service    *Servicex
+	service    *Service
 	handler    *Handler
 }
 
