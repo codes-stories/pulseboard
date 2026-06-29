@@ -21,6 +21,7 @@ func main() {
 	log.Printf("loaded config: %+v", cfg)
 	var pool *pgxpool.Pool
 
+	//database coonection is optional, if DATABASE_URL is not set, the server will start without database connection
 	if cfg.DBURL != "" {
 		dbPool, err := database.NewPool(cfg.DBURL)
 		log.Printf("database connection established: %v", dbPool.Stat().TotalConns())
