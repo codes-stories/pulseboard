@@ -5,7 +5,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 BACKEND_DIR := backend
-FRONTEND_DIR := frontend
+FRONTEND_DIR := pluseboard-monitoring
 AGENT_DIR := pulse_agent
 MIGRATIONS_DIR := $(BACKEND_DIR)/migrations
 BACKEND_ENV := $(BACKEND_DIR)/.env
@@ -75,15 +75,15 @@ test-agent: ## Run Erlang unit tests for the pulse agent.
 	cd $(AGENT_DIR) && rebar3 eunit
 
 .PHONY: test-frontend
-test-frontend: ## Run frontend tests when the frontend directory exists.
+test-frontend: ## Run frontend lint checks.
 	@if [ ! -d "$(FRONTEND_DIR)" ]; then \
 		echo "frontend directory not found: $(FRONTEND_DIR)"; \
 		exit 1; \
 	fi
-	cd $(FRONTEND_DIR) && npm run test
+	cd $(FRONTEND_DIR) && npm run lint
 
 .PHONY: test
-test: test-server test-agent ## Run backend and agent tests.
+test: test-server test-agent test-frontend ## Run backend, agent, and frontend checks.
 
 .PHONY: tidy
 tidy: ## Format Go files and tidy backend module dependencies.
@@ -92,6 +92,14 @@ tidy: ## Format Go files and tidy backend module dependencies.
 .PHONY: build-server
 build-server: ## Compile the Go API binary into backend/bin/api.
 	cd $(BACKEND_DIR) && GOCACHE=$(GOCACHE) go build -o bin/api ./cmd/api
+
+.PHONY: build-frontend
+build-frontend: ## Create an optimized frontend production build.
+	@if [ ! -d "$(FRONTEND_DIR)" ]; then \
+		echo "frontend directory not found: $(FRONTEND_DIR)"; \
+		exit 1; \
+	fi
+	cd $(FRONTEND_DIR) && npm run build
 
 .PHONY: clean-server
 clean-server: ## Remove Go build outputs and local Go cache for the backend.
@@ -103,15 +111,15 @@ clean-agent: ## Remove Erlang build artifacts for the pulse agent.
 	cd $(AGENT_DIR) && rebar3 clean
 
 .PHONY: clean-frontend
-clean-frontend: ## Run frontend cleanup when the frontend directory exists.
+clean-frontend: ## Remove generated Next.js frontend output.
 	@if [ ! -d "$(FRONTEND_DIR)" ]; then \
 		echo "frontend directory not found: $(FRONTEND_DIR)"; \
 		exit 1; \
 	fi
-	cd $(FRONTEND_DIR) && npm run clean
+	rm -rf $(FRONTEND_DIR)/.next
 
 .PHONY: clean
-clean: clean-server clean-agent ## Clean backend and agent build artifacts.
+clean: clean-server clean-agent clean-frontend ## Clean generated project artifacts.
 
 .PHONY: migrate-up
 migrate-up: ## Apply all pending database migrations with goose.
@@ -171,7 +179,7 @@ compose-ps: ## Show containers from the base Docker compose stack.
 Run-Agent: run-agent ## Alias for run-agent.
 Run-Server: run-server ## Alias for run-server.
 Run-Migrations: migrate-up ## Alias for migrate-up.
-Run-Frontend: run-frontend ## Alias for run-frontend.
+run-frontend: run-frontend ## Alias for run-frontend.
 
 .PHONY: run-test-server run-test-agent run-test-frontend
 run-test-server: test-server ## Alias for test-server.

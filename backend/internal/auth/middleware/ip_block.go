@@ -1,25 +1,32 @@
-/*
-@copyright: 2026 PulseBoard Inc.
-@author: Gaurav Kumar
-@description: Middleware for blocking IP addresses based on a configurable blocklist. This middleware checks incoming requests against a list of blocked IPs and denies access if a match is found. The blocklist can be managed through the admin interface, allowing administrators to add or remove IP addresses as needed.
-*/
-
-package auth
+package middleware
 
 import (
 	"net/http"
+	"strings"
 )
 
-
-// Only allowed the IPs in the blocklist will be blocked, all other IPs will be allowed
-func (s *Service) IPBlockMiddleware(next http.Handler) http.Handler {
-	
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := r.RemoteAddr
-		if s.isIPBlocked(ip) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
+func IPBlock(blockedIPs []string) Middleware {
+	blocked := make(map[string]struct{}, len(blockedIPs))
+	for _, blockedIP := range blockedIPs {
+		blockedIP = strings.TrimSpace(blockedIP)
+		if blockedIP == "" {
+			continue
 		}
-		next.ServeHTTP(w, r)
-	})
+		blocked[blockedIP] = struct{}{}
+	}
+
+	if len(blocked) == 0 {
+		return nil
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, found := blocked[ClientIP(r)]; found {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

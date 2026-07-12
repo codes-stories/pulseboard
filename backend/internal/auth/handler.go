@@ -76,3 +76,6 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
 }
+
+
+//here onward we are dealing with the Agent Heartbeat and Monitor CheckResult models, which are used for monitoring and tracking the status of agents and monitors in the system. The Heartbeat model captures the state of an agent, including its IP address, version, latency, memory usage, CPU usage, and status. The CheckResult model records the outcome of a monitor check, including the status code, response time, success flag, error message (if any), and the timestamp of when the check was performed. These models are essential for maintaining the health and performance of the system's monitoring infrastructure.
