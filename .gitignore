@@ -32,6 +32,12 @@ frontend/build/
 frontend/coverage/
 frontend/.turbo/
 frontend/.vite/
+pluseboard-monitoring/node_modules/
+pluseboard-monitoring/.next/
+pluseboard-monitoring/dist/
+pluseboard-monitoring/build/
+pluseboard-monitoring/.turbo/
+pluseboard-monitoring/.vite/
 
 # Erlang/rebar agent
 pulse_agent/.rebar3/

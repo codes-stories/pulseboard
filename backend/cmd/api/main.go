@@ -21,6 +21,7 @@ func main() {
 	log.Printf("loaded config: %+v", cfg)
 	var pool *pgxpool.Pool
 
+	//database coonection is optional, if DATABASE_URL is not set, the server will start without database connection
 	if cfg.DBURL != "" {
 		dbPool, err := database.NewPool(cfg.DBURL)
 		log.Printf("database connection established: %v", dbPool.Stat().TotalConns())
@@ -54,7 +55,7 @@ func routes(pool *pgxpool.Pool, cfg *config.Config) http.Handler {
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
+	r.Use(middleware.Logger) // in production, you might want to use a more sophisticated logging middleware
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{fallback(os.Getenv("CORS_ALLOWED_ORIGIN"), "http://localhost:3000")},
