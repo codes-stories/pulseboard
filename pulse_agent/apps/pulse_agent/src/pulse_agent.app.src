@@ -9,7 +9,9 @@
         inets,
         ssl
     ]},
-    {env, []},
+    {env, [
+        {log_level, info}
+    ]},
     {modules, [pulse_agent_api, pulse_agent_app, pulse_agent_sup]},
     {licenses, ["Apache-2.0"]},
     {links, []}

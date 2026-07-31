@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "../design-system/theme/theme-provider";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Pulseboard — Infrastructure, in focus",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html
