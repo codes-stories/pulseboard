@@ -88,13 +88,44 @@ establish_connection(Options) ->
     Timeout = option(timeout, Options, config(request_timeout, ?DEFAULT_TIMEOUT)),
     Metadata = option(metadata, Options, #{}),
     RequestUrl = join_url(BackendUrl, ConnectPath),
-    Payload = encode_payload([{agent_id, AgentId}, {node, node()}, {hostname, hostname()}, {metadata, format_metadata(Metadata)}, {timestamp, integer_to_list(erlang:system_time(second))}]),
+    Payload = encode_payload([
+        {agent_id, AgentId},
+        {node, node()},
+        {hostname, hostname()},
+        {metadata, format_metadata(Metadata)},
+        {timestamp, integer_to_list(erlang:system_time(second))}
+    ]),
     Headers = [{"content-type", "application/x-www-form-urlencoded"}],
-    case httpc:request(post, {RequestUrl, Headers, "application/x-www-form-urlencoded", Payload}, [{timeout, Timeout}], []) of
-        {ok, {{_, StatusCode, _}, RespHeaders, RespBody}} when StatusCode >= 200, StatusCode < 300 ->
-            {ok, #{connected => true, backend_url => BackendUrl, connect_url => RequestUrl, agent_id => AgentId, timeout => Timeout, response_code => StatusCode, response_headers => RespHeaders, response_body => RespBody, connected_at => erlang:system_time(second)}};
+    case
+        httpc:request(
+            post,
+            {RequestUrl, Headers, "application/x-www-form-urlencoded", Payload},
+            [{timeout, Timeout}],
+            []
+        )
+    of
+        {ok, {{_, StatusCode, _}, RespHeaders, RespBody}} when
+            StatusCode >= 200, StatusCode < 300
+        ->
+            {ok, #{
+                connected => true,
+                backend_url => BackendUrl,
+                connect_url => RequestUrl,
+                agent_id => AgentId,
+                timeout => Timeout,
+                response_code => StatusCode,
+                response_headers => RespHeaders,
+                response_body => RespBody,
+                connected_at => erlang:system_time(second)
+            }};
         {ok, {{_, StatusCode, ReasonPhrase}, RespHeaders, RespBody}} ->
-            {error, #{reason => backend_rejected, status_code => StatusCode, status_text => ReasonPhrase, response_headers => RespHeaders, response_body => RespBody}};
+            {error, #{
+                reason => backend_rejected,
+                status_code => StatusCode,
+                status_text => ReasonPhrase,
+                response_headers => RespHeaders,
+                response_body => RespBody
+            }};
         {error, Reason} ->
             {error, Reason}
     end.
@@ -104,7 +135,13 @@ maybe_notify_disconnect(State) ->
     DisconnectPath = config(disconnect_path, ?DEFAULT_DISCONNECT_PATH),
     RequestUrl = join_url(BackendUrl, DisconnectPath),
     Headers = [{"content-type", "application/x-www-form-urlencoded"}],
-    _ = httpc:request(post, {RequestUrl, Headers, "application/x-www-form-urlencoded", encode_payload([{agent_id, maps:get(agent_id, State, default_agent_id())}])}, [{timeout, config(request_timeout, ?DEFAULT_TIMEOUT)}], []),
+    _ = httpc:request(
+        post,
+        {RequestUrl, Headers, "application/x-www-form-urlencoded",
+            encode_payload([{agent_id, maps:get(agent_id, State, default_agent_id())}])},
+        [{timeout, config(request_timeout, ?DEFAULT_TIMEOUT)}],
+        []
+    ),
     ok.
 
 config(Key, Default) ->
@@ -169,9 +206,13 @@ value_to_string(Value) ->
 
 format_metadata(Metadata) when is_map(Metadata) ->
     case maps:to_list(Metadata) of
-        [] -> "";
+        [] ->
+            "";
         Pairs ->
-            lists:join(";", [lists:flatten([value_to_string(Key), "=", value_to_string(Value)]) || {Key, Value} <- Pairs])
+            lists:join(";", [
+                lists:flatten([value_to_string(Key), "=", value_to_string(Value)])
+             || {Key, Value} <- Pairs
+            ])
     end;
 format_metadata(Metadata) ->
     value_to_string(Metadata).

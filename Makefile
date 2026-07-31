@@ -10,7 +10,7 @@ AGENT_DIR := pulse_agent
 MIGRATIONS_DIR := $(BACKEND_DIR)/migrations
 BACKEND_ENV := $(BACKEND_DIR)/.env
 GO_REQUIRED_VERSION := 1.26.3
-ERLANG_REQUIRED_VERSION := 24.0
+ERLANG_MINIMUM_VERSION := 24
 
 # Keep Go build/cache files inside the workspace so sandboxed runs and local
 # cleanup are predictable.
@@ -42,20 +42,29 @@ check-go-version:
 	@go version | grep -q "go$(GO_REQUIRED_VERSION)" || \
 	( echo "Error: Go $(GO_REQUIRED_VERSION) is required"; exit 1 )
 
-.PHONY: run-server
-run-server: check-go-version ## Start the Go API server from backend/cmd/api.
+.PHONY: run-server start-api
+run-server start-api: check-go-version ## Start the Go API server from backend/cmd/api.
 	cd $(BACKEND_DIR) && GOCACHE=$(GOCACHE) go run ./cmd/api
 #################################################
 
-## Check for required Erlang version before running any Erlang-related tasks.
+## Check for a supported Erlang version before running any Erlang-related tasks.
 .PHONY: check-erlang
 check-erlang-version:
-	@erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().' -noshell | grep -q "$(ERLANG_REQUIRED_VERSION)" || \
-	( echo "Error: Erlang/OTP $(ERLANG_REQUIRED_VERSION) is required"; exit 1 )
-.PHONY: run-agent
-run-agent: ## Compile and start the Erlang pulse agent shell.
+	@erl -noshell -eval 'io:format("~s", [erlang:system_info(otp_release)]), halt().' | \
+	awk -v minimum="$(ERLANG_MINIMUM_VERSION)" '{ if ($$1 + 0 < minimum) { exit 1 } }' || \
+	( echo "Error: Erlang/OTP $(ERLANG_MINIMUM_VERSION) or newer is required"; exit 1 )
+.PHONY: run-agent start-agent
+run-agent start-agent: ## Compile and start the Erlang pulse agent shell.
 	check-erlang-version && cd $(AGENT_DIR) && rebar3 compile && rebar3 shell
 ###################################################
+
+.PHONY: status-api
+status-api: ## Check the API health endpoint (API must already be running).
+	curl --fail --silent --show-error http://127.0.0.1:8080/health
+
+.PHONY: status-agent
+status-agent: ## Print the local agent connection status.
+	cd $(AGENT_DIR) && rebar3 compile && erl -noshell -pa _build/default/lib/pulse_agent/ebin -eval 'application:ensure_all_started(pulse_agent), io:format("~p~n", [pulse_agent_api:status()]), init:stop().'
 
 
 .PHONY: run-frontend
@@ -73,6 +82,10 @@ test-server: ## Run all Go backend tests.
 .PHONY: test-agent
 test-agent: ## Run Erlang unit tests for the pulse agent.
 	cd $(AGENT_DIR) && rebar3 eunit
+
+.PHONY: test-agent-ct
+test-agent-ct: ## Run Erlang Common Test suites for the pulse agent.
+	cd $(AGENT_DIR) && rebar3 ct
 
 .PHONY: test-frontend
 test-frontend: ## Run frontend lint checks.
