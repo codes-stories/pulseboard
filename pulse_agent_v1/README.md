@@ -18,6 +18,21 @@ Run
 
     $ rebar3 shell
 
+Direct CLI
+----------
+
+    $ make install
+    $ pulse-agent login --token <TOKEN>
+    $ pulse-agent login --api-key <API_KEY>
+    $ pulse-agent status
+    $ pulse-agent logout
+
+If you want login to require the agent server, set:
+
+    $ export PULSE_AGENT_API_URL=http://localhost:8082
+
+When that variable is present, the CLI checks the server health endpoint before saving the credential.
+
 API
 ---
 

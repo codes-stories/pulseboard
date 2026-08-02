@@ -1,0 +1,151 @@
+#!/usr/bin/env escript
+%%! -noshell
+-mode(compile).
+
+main(Args) ->
+    case Args of
+        ["login", "--token", Token] -> login(Token);
+        ["login", "--api-key", ApiKey] -> login(ApiKey);
+        ["login", "--apikey", ApiKey] -> login(ApiKey);
+        ["login", Token] -> login(Token);
+        ["status"] -> status();
+        ["logout"] -> logout();
+        _ -> usage()
+    end.
+
+login(Credential) ->
+    case ensure_server_ready() of
+        ok ->
+            case save(Credential) of
+                ok ->
+                    io:format("Logged in successfully.~n");
+                {error, Reason} ->
+                    io:format("Login failed: ~s~n", [format_error(Reason)])
+            end;
+        {error, Reason} ->
+            io:format("Login failed: ~s~n", [format_error(Reason)])
+    end.
+
+status() ->
+    case load() of
+        {ok, Credential} ->
+            io:format("Logged in with credential: ~s~n", [mask(Credential)]);
+        {error, not_found} ->
+            io:format("Not logged in.~n");
+        {error, Reason} ->
+            io:format("Status failed: ~s~n", [format_error(Reason)])
+    end.
+
+logout() ->
+    case delete() of
+        ok ->
+            io:format("Logged out successfully.~n");
+        {error, not_found} ->
+            io:format("Not logged in.~n");
+        {error, Reason} ->
+            io:format("Logout failed: ~s~n", [format_error(Reason)])
+    end.
+
+usage() ->
+    io:format(
+        "\n"
+        "Pulse Agent CLI\n"
+        "\n"
+        "Usage:\n"
+        "\n"
+        "  escript pulse-agent login <TOKEN>\n"
+        "  escript pulse-agent login --token <TOKEN>\n"
+        "  escript pulse-agent login --api-key <API_KEY>\n"
+        "\n"
+        "  Optional server check: set PULSE_AGENT_API_URL=http://host:port\n"
+        "  to require the agent server to be reachable before login.\n"
+        "\n"
+        "  escript pulse-agent status\n"
+        "\n"
+        "  escript pulse-agent logout\n"
+        "\n"
+    ).
+
+save(Credential) when is_list(Credential); is_binary(Credential) ->
+    Dir = filename:dirname(path()),
+    ok = filelib:ensure_dir(filename:join(Dir, "placeholder")),
+    file:write_file(path(), to_binary(Credential)).
+
+load() ->
+    case file:read_file(path()) of
+        {ok, Binary} -> {ok, trim_binary(Binary)};
+        {error, enoent} -> {error, not_found};
+        {error, Reason} -> {error, Reason}
+    end.
+
+delete() ->
+    case file:delete(path()) of
+        ok -> ok;
+        {error, enoent} -> {error, not_found};
+        {error, Reason} -> {error, Reason}
+    end.
+
+path() ->
+    filename:join([home_dir(), ".pulse_agent_v1", "credential"]).
+
+format_error(not_found) ->
+    "credential not found";
+format_error(Reason) when is_atom(Reason) ->
+    atom_to_list(Reason);
+format_error(Reason) when is_binary(Reason) ->
+    binary_to_list(Reason);
+format_error(Reason) ->
+    io_lib:format("~p", [Reason]).
+
+mask(Credential) when is_binary(Credential) ->
+    mask(binary_to_list(Credential));
+mask(Credential) when is_list(Credential) ->
+    case length(Credential) of
+        N when N =< 8 -> lists:duplicate(N, $*);
+        N ->
+            Prefix = lists:sublist(Credential, 4),
+            Suffix = lists:sublist(Credential, N - 3, 4),
+            Prefix ++ "..." ++ Suffix
+    end.
+
+to_binary(Value) when is_binary(Value) ->
+    Value;
+to_binary(Value) when is_list(Value) ->
+    list_to_binary(Value).
+
+trim_binary(Binary) ->
+    list_to_binary(string:trim(binary_to_list(Binary), trailing, "\r\n")).
+
+home_dir() ->
+    case os:getenv("HOME") of
+        false -> ".";
+        Home -> Home
+    end.
+
+ensure_server_ready() ->
+    case os:getenv("PULSE_AGENT_API_URL") of
+        false ->
+            ok;
+        BaseUrl ->
+            ensure_inets_started(),
+            HealthUrl = health_url(BaseUrl),
+            case httpc:request(get, {HealthUrl, []}, [], []) of
+                {ok, {{_, 200, _}, _, _}} ->
+                    ok;
+                {ok, {{_, Status, _}, _, _}} ->
+                    {error, {server_unavailable, Status, HealthUrl}};
+                {error, Reason} ->
+                    {error, {server_unavailable, Reason, HealthUrl}}
+            end
+    end.
+
+ensure_inets_started() ->
+    case application:ensure_all_started(inets) of
+        {ok, _} -> ok;
+        {error, {already_started, inets}} -> ok;
+        {error, Reason} -> erlang:error({cannot_start_inets, Reason})
+    end.
+
+health_url(BaseUrl) ->
+    CleanBase = string:trim(BaseUrl, trailing, "/"),
+    CleanBase ++ "/api/v1/health".
