@@ -1,0 +1,97 @@
+name: PR Branch Naming Policy
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  validate-branch-name:
+    name: Validate source branch name
+    runs-on: ubuntu-latest
+
+    env:
+      ALLOWED_PREFIXES: backend,PM,PA_v1,gitworkflow
+      ALLOWED_TYPES: feature,bug,fixes,setup,hotfix,refactor,docs,chore
+      TICKET_ID_PATTERN: '[A-Za-z][A-Za-z0-9._-]*'
+
+    steps:
+      - name: Validate branch naming convention
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          branch_name='${{ github.head_ref }}'
+          target_branch='${{ github.base_ref }}'
+
+          IFS=',' read -r -a prefixes <<< "$ALLOWED_PREFIXES"
+          IFS=',' read -r -a types <<< "$ALLOWED_TYPES"
+
+          prefix_pattern="$(IFS='|'; printf '%s' "${prefixes[*]}")"
+          type_pattern="$(IFS='|'; printf '%s' "${types[*]}")"
+          full_pattern="^(${prefix_pattern})-(${type_pattern})(/[A-Za-z0-9._-]+)*-(${TICKET_ID_PATTERN})$"
+
+          if [[ ! "$branch_name" =~ $full_pattern ]]; then
+            echo "::error::Invalid branch name: $branch_name"
+            echo "::error::For PRs targeting $target_branch, use: <prefix>-<type>[/optional-path]-<TicketId>"
+            echo "::error::Allowed prefixes: $ALLOWED_PREFIXES"
+            echo "::error::Allowed types: $ALLOWED_TYPES"
+            echo "::error::Examples: backend-feature/auth-1234, PM-bug/login-ABC-12, PA_v1-fixes/api-timeout-TCK-9"
+            exit 1
+          fi
+
+          echo "Branch name '$branch_name' matches the required policy for PRs targeting '$target_branch'."
+
+  validate-pr-description:
+    name: Validate PR description structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate PR body template
+        shell: bash
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          REQUIRED_HEADINGS: "Description of Change,Checklist,Release Notes"
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          body = os.environ.get("PR_BODY", "") or ""
+          required_headings = [item.strip() for item in os.environ.get("REQUIRED_HEADINGS", "").split(",") if item.strip()]
+
+          if not body.strip():
+              print("::error::PR description is required.")
+              sys.exit(1)
+
+          def section_content(section_name: str):
+              pattern = rf"(?ms)^####\s+{re.escape(section_name)}\s*$\n(.*?)(?=^####\s+|\Z)"
+              match = re.search(pattern, body)
+              return match.group(1).strip() if match else None
+
+          missing = [heading for heading in required_headings if section_content(heading) is None]
+          if missing:
+              print("::error::Missing required PR description section(s): " + ", ".join(missing))
+              print("::error::Expected sections: #### Description of Change, #### Checklist, #### Release Notes")
+              sys.exit(1)
+
+          for heading in required_headings:
+              content = section_content(heading)
+              if not content:
+                  print(f"::error::The '{heading}' section must not be empty.")
+                  sys.exit(1)
+
+          checklist = section_content("Checklist")
+          if not re.search(r"(?m)^\s*[-*]\s+\S", checklist):
+              print("::error::The Checklist section must include at least one bullet item.")
+              sys.exit(1)
+
+          print("PR description includes the required sections and a non-empty checklist.")
+          PY
