@@ -18,6 +18,21 @@ Run
 
     $ rebar3 shell
 
+Direct CLI
+----------
+
+    $ make install
+    $ pulse-agent login --token <TOKEN>
+    $ pulse-agent login --api-key <API_KEY>
+    $ pulse-agent status
+    $ pulse-agent logout
+
+If you want login to require the agent server, set:
+
+    $ export PULSE_AGENT_API_URL=http://localhost:8082
+
+When that variable is present, the CLI checks the server health endpoint before saving the credential.
+
 API
 ---
 
@@ -46,3 +61,25 @@ Logs:
 Agents:
 
     GET /api/v1/agents
+
+
+---
+>
+make install PREFIX=/tmp/pulse-agent-test >/tmp/pulse-agent-install.log && cd /tmp && /tmp/pulse-agent-test/bin/pulse-agent login --token any-token && /tmp/pulse-agent-test/bin/pulse-agent status && /tmp/pulse-agent-test/bin/pulse-agent logout && cat /tmp/pulse-agent-install.log
+
+
+---
+
+#### CLI SETUP
+>Use it like this:
+
+- Run make install inside pulse_agent_v1.
+- Make sure ~/.local/bin is on your PATH.
+- Run pulse-agent login --token ... from any directory.
+- I validated that the installed command works from a different directory with login, status, and logout.
+
+>
+![alt text](image.png)
+
+
+

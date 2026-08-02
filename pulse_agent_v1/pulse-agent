@@ -1,0 +1,286 @@
+#!/usr/bin/env escript
+%%! -noshell
+-mode(compile).
+
+%% ===========================================================================
+%% Pulse Agent CLI
+%% ===========================================================================
+
+main(Args) ->
+    io:setopts(standard_io, [{encoding, unicode}]),
+    case Args of
+        ["login", "--token", Token] -> login(Token);
+        ["login", "--api-key", ApiKey] -> login(ApiKey);
+        ["login", "--apikey", ApiKey] -> login(ApiKey);
+        ["login", Token] -> login(Token);
+        ["status"] -> status();
+        ["logout"] -> logout();
+        _ -> usage()
+    end.
+
+%% ===========================================================================
+%% Commands
+%% ===========================================================================
+
+login(Credential) ->
+    print_banner(),
+    spin("Connecting to Pulse Agent", 8, 80),
+    case ensure_server_ready() of
+        ok ->
+            case save(Credential) of
+                ok ->
+                    io:format("~ts~n", [ok_line("Connected")]),
+                    io:format("~ts~n", [ok_line("Credential saved")]),
+                    io:format("~n"),
+                    print_box(
+                        "success",
+                        [
+                            "Logged in successfully",
+                            dim("credential  ") ++ mask(Credential)
+                        ]
+                    );
+                {error, Reason} ->
+                    io:format("~ts~n~n", [fail_line("Connected")]),
+                    print_box("error", ["Login failed", format_error(Reason)])
+            end;
+        {error, Reason} ->
+            io:format("~ts~n~n", [fail_line("Connected")]),
+            print_box("error", ["Login failed", format_error(Reason)])
+    end.
+
+status() ->
+    print_banner(),
+    case load() of
+        {ok, Credential} ->
+            print_box(
+                "success",
+                [
+                    "Logged in",
+                    dim("credential  ") ++ mask(Credential)
+                ]
+            );
+        {error, not_found} ->
+            print_box("warn", [
+                "Not logged in", dim("run `pulse-agent login <TOKEN>` to authenticate")
+            ]);
+        {error, Reason} ->
+            print_box("error", ["Status check failed", format_error(Reason)])
+    end.
+
+logout() ->
+    print_banner(),
+    case delete() of
+        ok ->
+            print_box("success", ["Logged out successfully"]);
+        {error, not_found} ->
+            print_box("warn", ["Not logged in"]);
+        {error, Reason} ->
+            print_box("error", ["Logout failed", format_error(Reason)])
+    end.
+
+usage() ->
+    print_banner(),
+    io:format(
+        "~ts~n"
+        "~n"
+        "  ~ts~n"
+        "    escript pulse-agent login <TOKEN>~n"
+        "    escript pulse-agent login --token <TOKEN>~n"
+        "    escript pulse-agent login --api-key <API_KEY>~n"
+        "~n"
+        "  ~ts~n"
+        "    escript pulse-agent status~n"
+        "~n"
+        "  ~ts~n"
+        "    escript pulse-agent logout~n"
+        "~n"
+        "  ~ts~n"
+        "    Set PULSE_AGENT_API_URL=http://host:port to require the~n"
+        "    agent server to be reachable before login.~n"
+        "~n",
+        [bold("USAGE"), dim("Login"), dim("Status"), dim("Logout"), dim("Server check (optional)")]
+    ).
+
+%% ===========================================================================
+%% Original logic (unchanged)
+%% ===========================================================================
+
+save(Credential) when is_list(Credential); is_binary(Credential) ->
+    Dir = filename:dirname(path()),
+    ok = filelib:ensure_dir(filename:join(Dir, "placeholder")),
+    file:write_file(path(), to_binary(Credential)).
+
+load() ->
+    case file:read_file(path()) of
+        {ok, Binary} -> {ok, trim_binary(Binary)};
+        {error, enoent} -> {error, not_found};
+        {error, Reason} -> {error, Reason}
+    end.
+
+delete() ->
+    case file:delete(path()) of
+        ok -> ok;
+        {error, enoent} -> {error, not_found};
+        {error, Reason} -> {error, Reason}
+    end.
+
+path() ->
+    filename:join([home_dir(), ".pulse_agent_v1", "credential"]).
+
+format_error(not_found) ->
+    "credential not found";
+format_error(Reason) when is_atom(Reason) ->
+    atom_to_list(Reason);
+format_error(Reason) when is_binary(Reason) ->
+    binary_to_list(Reason);
+format_error(Reason) ->
+    io_lib:format("~p", [Reason]).
+
+mask(Credential) when is_binary(Credential) ->
+    mask(binary_to_list(Credential));
+mask(Credential) when is_list(Credential) ->
+    case length(Credential) of
+        N when N =< 8 -> lists:duplicate(N, $*);
+        N ->
+            Prefix = lists:sublist(Credential, 4),
+            Suffix = lists:sublist(Credential, N - 3, 4),
+            Prefix ++ "..." ++ Suffix
+    end.
+
+to_binary(Value) when is_binary(Value) ->
+    Value;
+to_binary(Value) when is_list(Value) ->
+    list_to_binary(Value).
+
+trim_binary(Binary) ->
+    list_to_binary(string:trim(binary_to_list(Binary), trailing, "\r\n")).
+
+home_dir() ->
+    case os:getenv("HOME") of
+        false -> ".";
+        Home -> Home
+    end.
+
+ensure_server_ready() ->
+    case os:getenv("PULSE_AGENT_API_URL") of
+        false ->
+            ok;
+        BaseUrl ->
+            ensure_inets_started(),
+            HealthUrl = health_url(BaseUrl),
+            case httpc:request(get, {HealthUrl, []}, [], []) of
+                {ok, {{_, 200, _}, _, _}} ->
+                    ok;
+                {ok, {{_, Status, _}, _, _}} ->
+                    {error, {server_unavailable, Status, HealthUrl}};
+                {error, Reason} ->
+                    {error, {server_unavailable, Reason, HealthUrl}}
+            end
+    end.
+
+ensure_inets_started() ->
+    case application:ensure_all_started(inets) of
+        {ok, _} -> ok;
+        {error, {already_started, inets}} -> ok;
+        {error, Reason} -> erlang:error({cannot_start_inets, Reason})
+    end.
+
+health_url(BaseUrl) ->
+    CleanBase = string:trim(BaseUrl, trailing, "/"),
+    CleanBase ++ "/api/v1/health".
+
+%% ===========================================================================
+%% Terminal styling (colors, banner, spinner, boxes)
+%% ===========================================================================
+
+-define(RESET, "\e[0m").
+-define(BOLD, "\e[1m").
+-define(DIM, "\e[2m").
+-define(CYAN, "\e[36m").
+-define(MAGENTA, "\e[35m").
+-define(GREEN, "\e[32m").
+-define(RED, "\e[31m").
+-define(YELLOW, "\e[33m").
+
+bold(Text) -> ?BOLD ++ Text ++ ?RESET.
+dim(Text) -> ?DIM ++ Text ++ ?RESET.
+cyan(Text) -> ?CYAN ++ Text ++ ?RESET.
+green(Text) -> ?GREEN ++ Text ++ ?RESET.
+red(Text) -> ?RED ++ Text ++ ?RESET.
+yellow(Text) -> ?YELLOW ++ Text ++ ?RESET.
+
+ok_line(Text) ->
+    green("  ✓ ") ++ Text.
+
+fail_line(Text) ->
+    red("  ✗ ") ++ Text.
+
+print_banner() ->
+    io:format(
+        "~n"
+        "~ts~n"
+        "~ts~n"
+        "~ts~n"
+        "~ts~n"
+        "~ts~n"
+        "~n",
+        [
+            ?CYAN ++ "   ___       _         " ++ ?RESET,
+            ?CYAN ++ "  / _ \\_   _| |___  ___ " ++ ?MAGENTA ++ "     _                    _   " ++
+                ?RESET,
+            ?CYAN ++ " | |_) | | | | / __|/ _ \\" ++ ?MAGENTA ++ "    / \\   __ _  ___ _ __ | |_ " ++
+                ?RESET,
+            ?CYAN ++ " |  __/| |_| | \\__ \\  __/" ++ ?MAGENTA ++
+                "   / _ \\ / _` |/ _ \\ '_ \\| __|" ++ ?RESET,
+            ?CYAN ++ " |_|    \\__,_|_|___/\\___|" ++ ?MAGENTA ++
+                "  /_/ \\_\\__, |\\___|_| |_|\\__|" ++ ?RESET ++
+                dim("  v1.0")
+        ]
+    ).
+
+%% Simple animated spinner rendered with carriage returns.
+spin(Label, Frames, DelayMs) ->
+    Glyphs = {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
+    lists:foreach(
+        fun(N) ->
+            Glyph = element((N rem tuple_size(Glyphs)) + 1, Glyphs),
+            io:format("\r~ts ~ts...", [cyan(Glyph), Label]),
+            timer:sleep(DelayMs)
+        end,
+        lists:seq(0, Frames - 1)
+    ),
+    io:format("\r~ts~n", [string:copies(" ", length(Label) + 6)]).
+
+%% Renders a rounded box around a list of lines, colored by kind.
+print_box(Kind, Lines) ->
+    {Color, Icon} =
+        case Kind of
+            "success" -> {?GREEN, "✓"};
+            "error" -> {?RED, "✗"};
+            "warn" -> {?YELLOW, "!"};
+            _ -> {?CYAN, "•"}
+        end,
+    PlainLines = [strip_ansi(L) || L <- Lines],
+    Width = lists:max([string:length(L) || L <- PlainLines]) + 4,
+    Top = Color ++ "╭" ++ string:copies("─", Width) ++ "╮" ++ ?RESET,
+    Bottom = Color ++ "╰" ++ string:copies("─", Width) ++ "╯" ++ ?RESET,
+    io:format("~ts~n", [Top]),
+    lists:foreach(
+        fun({Idx, Line}) ->
+            Prefix =
+                case Idx of
+                    1 -> " " ++ Color ++ Icon ++ ?RESET ++ " ";
+                    _ -> "   "
+                end,
+            Pad = string:copies(" ", Width - string:length(strip_ansi(Line)) - 2),
+            io:format("~ts~ts~ts~ts~ts ~ts~n", [
+                Color, "│", ?RESET, Prefix, Line, Pad ++ Color ++ "│" ++ ?RESET
+            ])
+        end,
+        lists:zip(lists:seq(1, length(Lines)), Lines)
+    ),
+    io:format("~ts~n~n", [Bottom]).
+
+%% Strips ANSI escape sequences so width math is based on visible chars.
+strip_ansi(Text) ->
+    re:replace(Text, "\e\\[[0-9;]*m", "", [global, {return, list}]).
