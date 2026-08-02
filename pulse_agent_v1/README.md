@@ -61,3 +61,25 @@ Logs:
 Agents:
 
     GET /api/v1/agents
+
+
+---
+>
+make install PREFIX=/tmp/pulse-agent-test >/tmp/pulse-agent-install.log && cd /tmp && /tmp/pulse-agent-test/bin/pulse-agent login --token any-token && /tmp/pulse-agent-test/bin/pulse-agent status && /tmp/pulse-agent-test/bin/pulse-agent logout && cat /tmp/pulse-agent-install.log
+
+
+---
+
+#### CLI SETUP
+>Use it like this:
+
+- Run make install inside pulse_agent_v1.
+- Make sure ~/.local/bin is on your PATH.
+- Run pulse-agent login --token ... from any directory.
+- I validated that the installed command works from a different directory with login, status, and logout.
+
+>
+![alt text](image.png)
+
+
+
