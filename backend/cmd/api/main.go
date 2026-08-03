@@ -51,7 +51,18 @@ func main() {
 
 func routes(pool *pgxpool.Pool, cfg *config.Config) http.Handler {
 	r := chi.NewRouter()
-	authModule := auth.NewModule(pool, cfg.JWTSecret)
+	authModule := auth.NewModule(pool, cfg.JWTSecret, auth.WithOAuthConfig(auth.OAuthConfig{
+		Google: auth.OAuthProviderConfig{
+			ClientID:     cfg.GoogleOAuthClientID,
+			ClientSecret: cfg.GoogleOAuthClientSecret,
+			RedirectURL:  cfg.GoogleOAuthRedirectURL,
+		},
+		GitHub: auth.OAuthProviderConfig{
+			ClientID:     cfg.GitHubOAuthClientID,
+			ClientSecret: cfg.GitHubOAuthClientSecret,
+			RedirectURL:  cfg.GitHubOAuthRedirectURL,
+		},
+	}))
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)

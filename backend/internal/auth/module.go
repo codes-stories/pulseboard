@@ -27,17 +27,18 @@ type Module struct {
 	service          *Service
 	handler          *Handler
 	middlewareConfig MiddlewareConfig
+	oauthConfig      OAuthConfig
 }
 
 func NewModule(db *pgxpool.Pool, jwtSecret string, opts ...ModuleOption) *Module {
 	repository := NewRepository(db)
-	service := NewService(repository, jwtSecret)
-	handler := NewHandler(service)
 	module := &Module{
 		repository: repository,
-		service:    service,
-		handler:    handler,
 	}
+	service := NewService(repository, jwtSecret, module.oauthConfig)
+	handler := NewHandler(service)
+	module.service = service
+	module.handler = handler
 
 	for _, opt := range opts {
 		if opt != nil {
@@ -45,11 +46,20 @@ func NewModule(db *pgxpool.Pool, jwtSecret string, opts ...ModuleOption) *Module
 		}
 	}
 
+	module.service = NewService(repository, jwtSecret, module.oauthConfig)
+	module.handler = NewHandler(module.service)
+
 	return module
 }
 
 func WithMiddlewareConfig(cfg MiddlewareConfig) ModuleOption {
 	return func(module *Module) {
 		module.middlewareConfig = cfg
+	}
+}
+
+func WithOAuthConfig(cfg OAuthConfig) ModuleOption {
+	return func(module *Module) {
+		module.oauthConfig = cfg
 	}
 }
