@@ -12,7 +12,7 @@ import (
 var (
 	ErrStoreUnavailable = errors.New("auth store is unavailable")
 	ErrUserNotFound     = errors.New("user not found")
-	ErrIdentityConflict  = errors.New("oauth identity is linked to another account")
+	ErrIdentityConflict = errors.New("oauth identity is linked to another account")
 )
 
 type Repository struct {

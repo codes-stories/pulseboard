@@ -9,7 +9,7 @@ export default function StatusPagesPage() {
         <p className="mt-2 text-[color:var(--muted)]">Public URL, custom domain, and branding controls.</p>
         <div className="mt-6 space-y-3">
           {statusPages.map((page) => (
-            <div key={page.name} className="rounded-[24px] border border-[color:var(--border)] px-4 py-4">
+            <div key={page.name} className="rounded-md border border-[color:var(--border)] px-4 py-4">
               <p className="font-medium">{page.name}</p>
               <p className="mt-1 text-sm text-[color:var(--muted)]">{page.url}</p>
               <p className="mt-2 text-xs text-[color:var(--muted)]">{page.domain} · {page.branding}</p>
@@ -17,7 +17,7 @@ export default function StatusPagesPage() {
           ))}
         </div>
       </GlassCard>
-      <GlassCard className="min-h-[380px] bg-gradient-to-br from-blue-500/20 to-cyan-500/10" />
+      <GlassCard className="min-h-[380px] bg-gradient-to-br from-amber-500/15 to-orange-500/5" />
     </div>
   );
 }

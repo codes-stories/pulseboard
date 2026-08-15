@@ -9,7 +9,7 @@ export default function AlertsPage() {
           <h1 className="text-3xl font-semibold tracking-tight">Alerts</h1>
           <p className="mt-2 text-[color:var(--muted)]">Alert history with filtering, search, and pagination-ready structure.</p>
         </div>
-        <div className="rounded-full border border-[color:var(--border)] px-4 py-2 text-sm text-[color:var(--muted)]">Search alerts</div>
+        <div className="rounded-md border border-[color:var(--border)] px-4 py-2 text-sm text-[color:var(--muted)]">Search alerts</div>
       </div>
       <div className="mt-6 grid gap-3">
         {dashboardAlerts.map((alert) => (

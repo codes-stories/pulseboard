@@ -1,0 +1,999 @@
+basePath: /api/v1
+definitions:
+  agents.APIKeyCreatedResponse:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      name:
+        type: string
+      prefix:
+        type: string
+    type: object
+  agents.APIKeyResponse:
+    properties:
+      agent_id:
+        type: string
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      name:
+        type: string
+      prefix:
+        type: string
+      revoked_at:
+        type: string
+    type: object
+  agents.AgentEnrollRequest:
+    properties:
+      device_id:
+        type: string
+      enrollment_token:
+        type: string
+      hostname:
+        type: string
+      region:
+        type: string
+      version:
+        type: string
+    type: object
+  agents.AgentEnrollResponse:
+    properties:
+      agent:
+        $ref: '#/definitions/agents.AgentResponse'
+      api_key:
+        $ref: '#/definitions/agents.APIKeyCreatedResponse'
+    type: object
+  agents.AgentJob:
+    properties:
+      expected_status:
+        type: integer
+      interval_seconds:
+        type: integer
+      method:
+        type: string
+      monitor_id:
+        type: string
+      name:
+        type: string
+      timeout_ms:
+        type: integer
+      url:
+        type: string
+    type: object
+  agents.AgentResponse:
+    properties:
+      cpu_usage:
+        type: number
+      created_at:
+        type: string
+      device_id:
+        type: string
+      hostname:
+        type: string
+      id:
+        type: string
+      last_seen_at:
+        type: string
+      memory_usage:
+        type: number
+      name:
+        type: string
+      region:
+        type: string
+      server_id:
+        type: string
+      status:
+        $ref: '#/definitions/agents.AgentStatus'
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      version:
+        type: string
+    type: object
+  agents.AgentStatus:
+    enum:
+    - pending
+    - online
+    - offline
+    - disabled
+    type: string
+    x-enum-varnames:
+    - AgentStatusPending
+    - AgentStatusOnline
+    - AgentStatusOffline
+    - AgentStatusDisabled
+  agents.CheckResultRequest:
+    properties:
+      checked_at:
+        type: string
+      error:
+        type: string
+      latency_ms:
+        type: integer
+      monitor_id:
+        type: string
+      status_code:
+        type: integer
+      success:
+        type: boolean
+    type: object
+  agents.CreateAPIKeyRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  agents.CreateAgentRequest:
+    properties:
+      hostname:
+        type: string
+      name:
+        type: string
+      region:
+        type: string
+      server_id:
+        type: string
+    type: object
+  agents.EnrollmentTokenResponse:
+    properties:
+      expires_at:
+        type: string
+      token:
+        type: string
+    type: object
+  agents.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  agents.HeartbeatRequest:
+    properties:
+      cpu_usage:
+        type: number
+      hostname:
+        type: string
+      memory_usage:
+        type: number
+      region:
+        type: string
+      version:
+        type: string
+    type: object
+  agents.InstallationResponse:
+    properties:
+      download_base_url:
+        type: string
+      install_url:
+        type: string
+      version:
+        type: string
+    type: object
+  agents.JobsResponse:
+    properties:
+      jobs:
+        items:
+          $ref: '#/definitions/agents.AgentJob'
+        type: array
+    type: object
+  agents.UpdateAgentRequest:
+    properties:
+      hostname:
+        type: string
+      name:
+        type: string
+      region:
+        type: string
+      status:
+        type: string
+      version:
+        type: string
+    type: object
+  auth.AuthResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      user:
+        $ref: '#/definitions/auth.User'
+    type: object
+  auth.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  auth.LoginRequest:
+    properties:
+      device_identity:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  auth.RefreshResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      user:
+        $ref: '#/definitions/auth.User'
+    type: object
+  auth.RegisterRequest:
+    properties:
+      device_identity:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  auth.User:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      phone:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  users.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  users.Profile:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      phone:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  users.UpdateProfileRequest:
+    properties:
+      avatar_url:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 'PulseBoard backend: user authentication, profile, agent management,
+    agent API keys, and agent enrollment/telemetry.'
+  title: PulseBoard API
+  version: "1.0"
+paths:
+  /agent/api-key/rotate:
+    post:
+      description: Revoke the API key used for this request and issue a fresh one.
+        The new plaintext key is returned exactly once.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.APIKeyCreatedResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - AgentAuth: []
+      summary: Rotate the agent's own API key
+      tags:
+      - Agent API
+  /agent/check-results:
+    post:
+      consumes:
+      - application/json
+      description: Report a monitoring check result from the agent.
+      parameters:
+      - description: Check result
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/agents.CheckResultRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - AgentAuth: []
+      summary: Ingest a check result
+      tags:
+      - Agent API
+  /agent/enroll:
+    post:
+      consumes:
+      - application/json
+      description: Consume a single-use enrollment token to bind an agent and issue
+        its first API key.
+      parameters:
+      - description: Enrollment details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/agents.AgentEnrollRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.AgentEnrollResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      summary: Enroll an agent
+      tags:
+      - Agent API
+  /agent/heartbeat:
+    post:
+      consumes:
+      - application/json
+      description: Update agent status and telemetry. Called periodically by the agent.
+      parameters:
+      - description: Heartbeat payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/agents.HeartbeatRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - AgentAuth: []
+      summary: Agent heartbeat
+      tags:
+      - Agent API
+  /agent/jobs:
+    get:
+      description: Return monitoring jobs assigned to the agent's owner.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.JobsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - AgentAuth: []
+      summary: List agent jobs
+      tags:
+      - Agent API
+  /agents:
+    get:
+      description: List all agents owned by the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/agents.AgentResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List agents
+      tags:
+      - Agents
+    post:
+      consumes:
+      - application/json
+      description: Register a new (pending) agent for the authenticated user.
+      parameters:
+      - description: Agent details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/agents.CreateAgentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/agents.AgentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an agent
+      tags:
+      - Agents
+  /agents/{agentID}:
+    delete:
+      description: Delete an agent and all of its API keys. Only the owner may delete.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete an agent
+      tags:
+      - Agents
+    get:
+      description: Get a single agent owned by the authenticated user.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.AgentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get an agent
+      tags:
+      - Agents
+    patch:
+      consumes:
+      - application/json
+      description: Update agent metadata. Only the owner may update their agent.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentID
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/agents.UpdateAgentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.AgentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an agent
+      tags:
+      - Agents
+  /agents/{agentID}/api-keys:
+    get:
+      description: List API keys for an agent. Secrets are never returned.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/agents.APIKeyResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List agent API keys
+      tags:
+      - API Keys
+    post:
+      consumes:
+      - application/json
+      description: Issue a new agent API key. The plaintext key is returned exactly
+        once.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentID
+        required: true
+        type: string
+      - description: Key name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/agents.CreateAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/agents.APIKeyCreatedResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an agent API key
+      tags:
+      - API Keys
+  /agents/{agentID}/api-keys/{keyID}/revoke:
+    post:
+      description: Revoke an agent API key. Revocation is permanent.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentID
+        required: true
+        type: string
+      - description: API key ID
+        in: path
+        name: keyID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke an agent API key
+      tags:
+      - API Keys
+  /agents/{agentID}/api-keys/{keyID}/rotate:
+    post:
+      description: Revoke the current key and issue a fresh one. The new plaintext
+        key is returned exactly once.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentID
+        required: true
+        type: string
+      - description: API key ID
+        in: path
+        name: keyID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.APIKeyCreatedResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rotate an agent API key
+      tags:
+      - API Keys
+  /agents/{agentID}/enrollment-token:
+    post:
+      description: Issue a short-lived single-use enrollment token for an agent.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/agents.EnrollmentTokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an enrollment token
+      tags:
+      - Enrollment
+  /agents/installation:
+    get:
+      description: Installation command and download metadata for the frontend.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agents.InstallationResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/agents.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Agent installation metadata
+      tags:
+      - Agents
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with email and password and start a session.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Login
+      tags:
+      - Authentication
+  /auth/logout:
+    post:
+      description: Revoke the current session and clear the refresh cookie.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Logout
+      tags:
+      - Authentication
+  /auth/me:
+    get:
+      description: Get the authenticated user from the access token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Current user
+      tags:
+      - Authentication
+  /auth/oauth/github/callback:
+    get:
+      description: Complete GitHub OAuth sign-in and start a session.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+      summary: GitHub OAuth callback
+      tags:
+      - Authentication
+  /auth/oauth/github/start:
+    get:
+      description: Redirect to GitHub for OAuth sign-in.
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+      summary: Start GitHub OAuth
+      tags:
+      - Authentication
+  /auth/oauth/google/callback:
+    get:
+      description: Complete Google OAuth sign-in and start a session.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+      summary: Google OAuth callback
+      tags:
+      - Authentication
+  /auth/oauth/google/start:
+    get:
+      description: Redirect to Google for OAuth sign-in.
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+      summary: Start Google OAuth
+      tags:
+      - Authentication
+  /auth/refresh:
+    post:
+      description: Exchange a refresh token cookie for a new access token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.RefreshResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Refresh the session
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account and start an authenticated session.
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/auth.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
+  /profile:
+    get:
+      description: Get the profile of the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.Profile'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/users.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the user profile
+      tags:
+      - Profile
+    patch:
+      consumes:
+      - application/json
+      description: Update profile fields of the authenticated user.
+      parameters:
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/users.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/users.Profile'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/users.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/users.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update the user profile
+      tags:
+      - Profile
+securityDefinitions:
+  AgentAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

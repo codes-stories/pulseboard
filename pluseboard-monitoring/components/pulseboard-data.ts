@@ -5,6 +5,7 @@ export const navLinks = [
   { label: "Blog", href: "/blog" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
+  { label: "API Tester", href: "/tools/api" },
 ];
 
 export const trustedBy = ["Nordship", "ForgeStack", "Cinder", "Arcadia", "Northstar", "AstraPay"];
@@ -38,8 +39,8 @@ export const testimonials = [
 ];
 
 export const pricingPlans = [
-  { name: "Starter", price: "$19", detail: "For small teams shipping critical APIs.", features: ["10 monitors", "2 regions", "Email alerts", "Basic status page"], accent: "from-blue-500/20 to-cyan-500/20" },
-  { name: "Growth", price: "$49", detail: "For teams running multiple services.", features: ["50 monitors", "5 regions", "Slack, Discord, webhooks", "Custom domains"], accent: "from-sky-500/25 to-indigo-500/25", featured: true },
+  { name: "Starter", price: "$19", detail: "For small teams shipping critical APIs.", features: ["10 monitors", "2 regions", "Email alerts", "Basic status page"], accent: "from-amber-500/15 to-orange-500/10" },
+  { name: "Growth", price: "$49", detail: "For teams running multiple services.", features: ["50 monitors", "5 regions", "Slack, Discord, webhooks", "Custom domains"], accent: "from-amber-500/20 to-orange-500/20", featured: true },
   { name: "Enterprise", price: "Custom", detail: "For regulated organizations and global platforms.", features: ["Unlimited monitors", "SLA support", "Dedicated regions", "SSO and audit logs"], accent: "from-cyan-500/20 to-emerald-500/20" },
 ];
 

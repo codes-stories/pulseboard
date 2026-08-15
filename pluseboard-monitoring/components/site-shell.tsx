@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "../design-system/theme/theme-toggle";
+import { useAuth } from "./auth-provider";
 import { navLinks } from "./pulseboard-data";
 
 function MenuIcon() {
@@ -23,11 +24,78 @@ function CloseIcon() {
   );
 }
 
-function ChevronIcon() {
+function SmileSwoosh() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-      <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="86" height="9" viewBox="0 0 86 9" fill="none" aria-hidden="true" className="block">
+      <path
+        d="M2 6.2C9 2.2 16 1.8 23 3.4c6 1.4 12 1.6 18 .4s12-1.4 18-.4c6 1 11 1.2 15.6-.6"
+        stroke="#f08804"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
+  );
+}
+
+function Wordmark() {
+  return (
+    <Link href="/" className="flex flex-col justify-center leading-none" aria-label="PulseBoard home">
+      <span className="text-lg font-bold tracking-tight text-[color:var(--nav-text)]">PulseBoard</span>
+      <SmileSwoosh />
+    </Link>
+  );
+}
+
+function AuthCluster({ mobile = false }: Readonly<{ mobile?: boolean }>) {
+  const { user, status, logout } = useAuth();
+  const authenticated = status === "authenticated";
+
+  if (mobile) {
+    return (
+      <div className="grid gap-2 border-t border-[color:var(--nav-border)] pt-3">
+        {authenticated && user ? (
+          <>
+            <p className="px-2 text-sm text-[color:var(--nav-muted)]">Hello, {user.name.split(" ")[0]}</p>
+            <Link href="/dashboard" className="btn btn-primary w-full justify-center">Dashboard</Link>
+            <button className="btn btn-secondary w-full justify-center" type="button" onClick={() => void logout()}>Logout</button>
+          </>
+        ) : (
+          <>
+            <Link href="/login" className="btn btn-secondary w-full justify-center">Sign in</Link>
+            <Link href="/register" className="btn btn-primary w-full justify-center">Start free</Link>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="hidden items-center gap-3 md:flex">
+      {authenticated && user ? (
+        <>
+          <Link
+            href="/dashboard"
+            className="group flex flex-col rounded border border-transparent px-2 py-1 leading-tight hover:border-[color:var(--nav-border)]"
+          >
+            <span className="text-xs text-[color:var(--nav-muted)]">Hello, {user.name.split(" ")[0]}</span>
+            <span className="text-sm font-bold text-[color:var(--nav-text)]">Dashboard</span>
+          </Link>
+          <button className="btn btn-ghost text-[color:var(--nav-muted)] hover:text-[color:var(--nav-text)]" type="button" onClick={() => void logout()}>Logout</button>
+        </>
+      ) : (
+        <>
+          <Link
+            href="/login"
+            className="group flex flex-col rounded border border-transparent px-2 py-1 leading-tight hover:border-[color:var(--nav-border)]"
+          >
+            <span className="text-xs text-[color:var(--nav-muted)]">Hello, sign in</span>
+            <span className="text-sm font-bold text-[color:var(--nav-text)]">Accounts &amp; Lists</span>
+          </Link>
+          <Link href="/register" className="btn btn-primary hidden lg:inline-flex">Start free</Link>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -37,21 +105,23 @@ export function SiteHeader() {
   const activeLabel = useMemo(() => navLinks.find((link) => link.href === pathname)?.label ?? "", [pathname]);
 
   return (
-    <header className="page-shell sticky top-0 z-50 pt-4">
-      <div className="glass-panel flex items-center justify-between rounded-full px-4 py-3 shadow-2xl shadow-black/20 md:px-6">
-        <Link href="/" className="flex items-center gap-3 font-semibold tracking-tight">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[color:var(--primary)] to-[color:var(--primary-strong)] text-white shadow-lg shadow-blue-500/30">
-            PB
+    <header className="nav-top sticky top-0 z-50">
+      <div className="page-shell flex h-16 items-center justify-between gap-4">
+        <div className="flex items-center gap-6">
+          <Wordmark />
+          <span className="hidden rounded border border-[color:var(--nav-border)] px-2 py-1 text-xs font-medium text-[color:var(--nav-muted)] lg:block">
+            {activeLabel || "Monitoring"}
           </span>
-          <span>
-            PulseBoard
-            <span className="ml-2 text-xs font-medium text-[color:var(--muted)]">{activeLabel}</span>
-          </span>
-        </Link>
+        </div>
 
-        <nav className="hidden items-center gap-2 lg:flex" aria-label="Primary navigation">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className={`rounded-full px-4 py-2 text-sm font-medium ${pathname === link.href ? "bg-white/8 text-white" : "text-[color:var(--muted)]"}`}>
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={pathname === link.href ? "page" : undefined}
+              className="nav-link-top"
+            >
               {link.label}
             </Link>
           ))}
@@ -59,10 +129,9 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link href="/login" className="btn btn-secondary hidden md:inline-flex">Login</Link>
-          <Link href="/register" className="btn btn-primary hidden md:inline-flex">Start Free <ChevronIcon /></Link>
+          <AuthCluster />
           <button
-            className="btn btn-secondary inline-flex lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded border border-[color:var(--nav-border)] text-[color:var(--nav-text)] lg:hidden"
             type="button"
             aria-label="Toggle navigation"
             aria-expanded={mobileOpen}
@@ -74,17 +143,20 @@ export function SiteHeader() {
       </div>
 
       {mobileOpen ? (
-        <div className="mt-3 rounded-[28px] border border-[color:var(--border)] bg-[color:var(--card-solid)] p-4 shadow-2xl shadow-black/30 lg:hidden">
-          <div className="grid gap-2">
+        <div className="page-shell pb-4 lg:hidden">
+          <div className="nav-top grid gap-1 rounded-md border border-[color:var(--nav-border)] bg-[color:var(--nav-bar)] p-3">
             {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)} className="rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-[color:var(--muted)] hover:border-[color:var(--border)] hover:bg-white/5 hover:text-white">
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={pathname === link.href ? "page" : undefined}
+                onClick={() => setMobileOpen(false)}
+                className="nav-link-top"
+              >
                 {link.label}
               </Link>
             ))}
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <Link href="/login" onClick={() => setMobileOpen(false)} className="btn btn-secondary">Login</Link>
-              <Link href="/register" onClick={() => setMobileOpen(false)} className="btn btn-primary">Start Free</Link>
-            </div>
+            <AuthCluster mobile />
           </div>
         </div>
       ) : null}
@@ -94,17 +166,20 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="page-shell pb-10 pt-4 md:pb-12">
-      <div className="flex flex-col gap-6 border-t border-[color:var(--border)] py-8 md:flex-row md:items-center md:justify-between">
-        <p className="text-sm text-[color:var(--muted)]">© {new Date().getFullYear()} PulseBoard. Monitoring that feels trustworthy.</p>
-        <div className="flex flex-wrap gap-5 text-sm text-[color:var(--muted)]">
-          <Link href="/docs" className="nav-link">Documentation</Link>
-          <Link href="/pricing" className="nav-link">Pricing</Link>
-          <Link href="/status" className="nav-link">Status</Link>
-          <Link href="/blog" className="nav-link">Blog</Link>
-          <Link href="/contact" className="nav-link">Privacy</Link>
-          <Link href="/contact" className="nav-link">Terms</Link>
-          <a href="https://github.com" target="_blank" rel="noreferrer" className="nav-link">GitHub</a>
+    <footer className="nav-top mt-8">
+      <div className="page-shell flex flex-col gap-6 py-10 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-lg font-bold tracking-tight text-[color:var(--nav-text)]">PulseBoard</p>
+          <p className="mt-2 max-w-xs text-sm text-[color:var(--nav-muted)]">Monitoring that feels trustworthy. © {new Date().getFullYear()} PulseBoard.</p>
+        </div>
+        <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-[color:var(--nav-muted)]">
+          <Link href="/docs" className="hover:text-[color:var(--nav-text)]">Documentation</Link>
+          <Link href="/pricing" className="hover:text-[color:var(--nav-text)]">Pricing</Link>
+          <Link href="/status" className="hover:text-[color:var(--nav-text)]">Status</Link>
+          <Link href="/blog" className="hover:text-[color:var(--nav-text)]">Blog</Link>
+          <Link href="/contact" className="hover:text-[color:var(--nav-text)]">Privacy</Link>
+          <Link href="/contact" className="hover:text-[color:var(--nav-text)]">Terms</Link>
+          <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-[color:var(--nav-text)]">GitHub</a>
         </div>
       </div>
     </footer>

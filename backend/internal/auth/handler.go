@@ -18,6 +18,15 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// @Summary Register a new user
+// @Tags Authentication
+// @Description Create a new user account and start an authenticated session.
+// @Accept json
+// @Produce json
+// @Param request body auth.RegisterRequest true "Registration details"
+// @Success 201 {object} auth.AuthResponse
+// @Failure 400 {object} auth.ErrorResponse
+// @Router /auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -37,6 +46,16 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, res)
 }
 
+// @Summary Login
+// @Tags Authentication
+// @Description Authenticate with email and password and start a session.
+// @Accept json
+// @Produce json
+// @Param request body auth.LoginRequest true "Login credentials"
+// @Success 200 {object} auth.AuthResponse
+// @Failure 400 {object} auth.ErrorResponse
+// @Failure 401 {object} auth.ErrorResponse
+// @Router /auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -56,22 +75,53 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, res)
 }
 
+// @Summary Start Google OAuth
+// @Tags Authentication
+// @Description Redirect to Google for OAuth sign-in.
+// @Produce json
+// @Success 302
+// @Router /auth/oauth/google/start [get]
 func (h *Handler) GoogleStart(w http.ResponseWriter, r *http.Request) {
 	h.redirectOAuth(w, r, OAuthProviderGoogle)
 }
 
+// @Summary Google OAuth callback
+// @Tags Authentication
+// @Description Complete Google OAuth sign-in and start a session.
+// @Produce json
+// @Success 200 {object} auth.AuthResponse
+// @Router /auth/oauth/google/callback [get]
 func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	h.handleOAuthCallback(w, r, OAuthProviderGoogle)
 }
 
+// @Summary Start GitHub OAuth
+// @Tags Authentication
+// @Description Redirect to GitHub for OAuth sign-in.
+// @Produce json
+// @Success 302
+// @Router /auth/oauth/github/start [get]
 func (h *Handler) GitHubStart(w http.ResponseWriter, r *http.Request) {
 	h.redirectOAuth(w, r, OAuthProviderGitHub)
 }
 
+// @Summary GitHub OAuth callback
+// @Tags Authentication
+// @Description Complete GitHub OAuth sign-in and start a session.
+// @Produce json
+// @Success 200 {object} auth.AuthResponse
+// @Router /auth/oauth/github/callback [get]
 func (h *Handler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 	h.handleOAuthCallback(w, r, OAuthProviderGitHub)
 }
 
+// @Summary Refresh the session
+// @Tags Authentication
+// @Description Exchange a refresh token cookie for a new access token.
+// @Produce json
+// @Success 200 {object} auth.RefreshResponse
+// @Failure 401 {object} auth.ErrorResponse
+// @Router /auth/refresh [post]
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := readRefreshCookie(r)
 	if err != nil {
@@ -92,6 +142,12 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, res)
 }
 
+// @Summary Logout
+// @Tags Authentication
+// @Description Revoke the current session and clear the refresh cookie.
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /auth/logout [post]
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := readRefreshCookie(r)
 	if err != nil {
@@ -109,6 +165,14 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "logged out"})
 }
 
+// @Summary Current user
+// @Tags Authentication
+// @Description Get the authenticated user from the access token.
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} auth.User
+// @Failure 401 {object} auth.ErrorResponse
+// @Router /auth/me [get]
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	token := bearerToken(r.Header.Get("Authorization"))
 	if token == "" {

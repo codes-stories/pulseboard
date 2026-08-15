@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	ErrInvalidInput           = errors.New("invalid input")
-	ErrInvalidCredentials     = errors.New("invalid email or password")
+	ErrInvalidInput            = errors.New("invalid input")
+	ErrInvalidCredentials      = errors.New("invalid email or password")
 	ErrProviderNotConfigured   = errors.New("oauth provider is not configured")
 	ErrInvalidOAuthState       = errors.New("invalid oauth state")
 	ErrInvalidToken            = errors.New("invalid token")
@@ -22,14 +22,14 @@ var (
 )
 
 type Service struct {
-	repository    *Repository
-	jwtSecret     string
-	oauth         OAuthConfig
-	accessTTL     time.Duration
-	refreshTTL    time.Duration
-	stateTTL      time.Duration
-	issuer        string
-	httpTimeout   time.Duration
+	repository  *Repository
+	jwtSecret   string
+	oauth       OAuthConfig
+	accessTTL   time.Duration
+	refreshTTL  time.Duration
+	stateTTL    time.Duration
+	issuer      string
+	httpTimeout time.Duration
 }
 
 func NewService(repository *Repository, jwtSecret string, oauth OAuthConfig) *Service {
@@ -210,10 +210,10 @@ func (s *Service) Refresh(ctx context.Context, refreshToken, deviceIdentity, ipA
 
 	return &AuthResponse{
 		User:         *user,
-		AccessToken:   accessToken,
-		RefreshToken:  newRefreshToken,
-		TokenType:     "Bearer",
-		ExpiresIn:     int64(time.Until(expiresAt).Seconds()),
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    int64(time.Until(expiresAt).Seconds()),
 	}, nil
 }
 
@@ -313,10 +313,10 @@ func (s *Service) issueSession(ctx context.Context, user *User, deviceIdentity, 
 
 	return &AuthResponse{
 		User:         *user,
-		AccessToken:   accessToken,
-		RefreshToken:  refreshToken,
-		TokenType:     "Bearer",
-		ExpiresIn:     int64(time.Until(expiresAt).Seconds()),
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    int64(time.Until(expiresAt).Seconds()),
 	}, nil
 }
 
