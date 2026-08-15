@@ -10,7 +10,7 @@ export default function LoginRoute() {
       <main className="page-shell section-shell">
         <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           <GlassCard className="relative overflow-hidden min-h-[620px]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.25),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(34,197,94,0.14),transparent_32%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(240,136,4,0.18),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(247,202,0,0.12),transparent_32%)]" />
             <div className="relative flex h-full flex-col justify-between p-4 md:p-8">
               <div>
                 <p className="section-kicker">PulseBoard</p>
@@ -22,7 +22,7 @@ export default function LoginRoute() {
                   ["Global checks", "Worldwide uptime coverage"],
                   ["Erlang agents", "Fault-tolerant regional monitoring"],
                 ].map((item) => (
-                  <div key={item[0]} className="rounded-[28px] border border-[color:var(--border)] bg-[color:var(--card-solid)]/70 p-5">
+                  <div key={item[0]} className="rounded-md border border-[color:var(--border)] bg-[color:var(--card-solid)]/70 p-5">
                     <p className="text-lg font-semibold">{item[0]}</p>
                     <p className="mt-2 text-sm text-[color:var(--muted)]">{item[1]}</p>
                   </div>

@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
+	"time"
 )
+
+const refreshCookieName = "pulse_refresh_token"
 
 type Handler struct {
 	service *Service
@@ -14,12 +18,22 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+// @Summary Register a new user
+// @Tags Authentication
+// @Description Create a new user account and start an authenticated session.
+// @Accept json
+// @Produce json
+// @Param request body auth.RegisterRequest true "Registration details"
+// @Success 201 {object} auth.AuthResponse
+// @Failure 400 {object} auth.ErrorResponse
+// @Router /auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	populateRequestContext(r, &req.DeviceIdentity)
 
 	res, err := h.service.Register(r.Context(), req)
 	if err != nil {
@@ -27,15 +41,28 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setRefreshCookie(w, r, res.RefreshToken, time.Now().UTC().Add(30*24*time.Hour))
+	res.RefreshToken = ""
 	writeJSON(w, http.StatusCreated, res)
 }
 
+// @Summary Login
+// @Tags Authentication
+// @Description Authenticate with email and password and start a session.
+// @Accept json
+// @Produce json
+// @Param request body auth.LoginRequest true "Login credentials"
+// @Success 200 {object} auth.AuthResponse
+// @Failure 400 {object} auth.ErrorResponse
+// @Failure 401 {object} auth.ErrorResponse
+// @Router /auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	populateRequestContext(r, &req.DeviceIdentity)
 
 	res, err := h.service.Login(r.Context(), req)
 	if err != nil {
@@ -43,11 +70,152 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setRefreshCookie(w, r, res.RefreshToken, time.Now().UTC().Add(30*24*time.Hour))
+	res.RefreshToken = ""
 	writeJSON(w, http.StatusOK, res)
 }
 
+// @Summary Start Google OAuth
+// @Tags Authentication
+// @Description Redirect to Google for OAuth sign-in.
+// @Produce json
+// @Success 302
+// @Router /auth/oauth/google/start [get]
+func (h *Handler) GoogleStart(w http.ResponseWriter, r *http.Request) {
+	h.redirectOAuth(w, r, OAuthProviderGoogle)
+}
+
+// @Summary Google OAuth callback
+// @Tags Authentication
+// @Description Complete Google OAuth sign-in and start a session.
+// @Produce json
+// @Success 200 {object} auth.AuthResponse
+// @Router /auth/oauth/google/callback [get]
+func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
+	h.handleOAuthCallback(w, r, OAuthProviderGoogle)
+}
+
+// @Summary Start GitHub OAuth
+// @Tags Authentication
+// @Description Redirect to GitHub for OAuth sign-in.
+// @Produce json
+// @Success 302
+// @Router /auth/oauth/github/start [get]
+func (h *Handler) GitHubStart(w http.ResponseWriter, r *http.Request) {
+	h.redirectOAuth(w, r, OAuthProviderGitHub)
+}
+
+// @Summary GitHub OAuth callback
+// @Tags Authentication
+// @Description Complete GitHub OAuth sign-in and start a session.
+// @Produce json
+// @Success 200 {object} auth.AuthResponse
+// @Router /auth/oauth/github/callback [get]
+func (h *Handler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
+	h.handleOAuthCallback(w, r, OAuthProviderGitHub)
+}
+
+// @Summary Refresh the session
+// @Tags Authentication
+// @Description Exchange a refresh token cookie for a new access token.
+// @Produce json
+// @Success 200 {object} auth.RefreshResponse
+// @Failure 401 {object} auth.ErrorResponse
+// @Router /auth/refresh [post]
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	refreshToken, err := readRefreshCookie(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "refresh token missing")
+		return
+	}
+	deviceIdentity := r.Header.Get("X-Device-Identity")
+	populateRequestContext(r, &deviceIdentity)
+
+	res, err := h.service.Refresh(r.Context(), refreshToken, deviceIdentity, clientIP(r), r.UserAgent())
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	setRefreshCookie(w, r, res.RefreshToken, time.Now().UTC().Add(30*24*time.Hour))
+	res.RefreshToken = ""
+	writeJSON(w, http.StatusOK, res)
+}
+
+// @Summary Logout
+// @Tags Authentication
+// @Description Revoke the current session and clear the refresh cookie.
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /auth/logout [post]
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	refreshToken, err := readRefreshCookie(r)
+	if err != nil {
+		clearRefreshCookie(w, r)
+		writeError(w, http.StatusOK, "logged out")
+		return
+	}
+
+	if err := h.service.Logout(r.Context(), refreshToken); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	clearRefreshCookie(w, r)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "logged out"})
+}
+
+// @Summary Current user
+// @Tags Authentication
+// @Description Get the authenticated user from the access token.
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} auth.User
+// @Failure 401 {object} auth.ErrorResponse
+// @Router /auth/me [get]
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	writeError(w, http.StatusNotImplemented, "auth middleware is not implemented yet")
+	token := bearerToken(r.Header.Get("Authorization"))
+	if token == "" {
+		writeError(w, http.StatusUnauthorized, "authorization token required")
+		return
+	}
+
+	user, err := h.service.Me(r.Context(), token)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *Handler) redirectOAuth(w http.ResponseWriter, r *http.Request, provider OAuthProvider) {
+	authURL, err := h.service.OAuthStartURL(provider)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, authURL, http.StatusFound)
+}
+
+func (h *Handler) handleOAuthCallback(w http.ResponseWriter, r *http.Request, provider OAuthProvider) {
+	req := OAuthCallbackRequest{
+		Code:           r.URL.Query().Get("code"),
+		State:          r.URL.Query().Get("state"),
+		DeviceIdentity: r.Header.Get("X-Device-Identity"),
+	}
+	populateRequestContext(r, &req.DeviceIdentity)
+
+	res, err := h.service.LoginWithOAuth(r.Context(), provider, req, clientIP(r), r.UserAgent())
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	setRefreshCookie(w, r, res.RefreshToken, time.Now().UTC().Add(30*24*time.Hour))
+	res.RefreshToken = ""
+	writeJSON(w, http.StatusOK, res)
 }
 
 func decodeJSON(r *http.Request, dst any) error {
@@ -70,12 +238,88 @@ func writeServiceError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrInvalidInput):
 		writeError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, ErrNotImplemented):
+	case errors.Is(err, ErrInvalidCredentials):
+		writeError(w, http.StatusUnauthorized, err.Error())
+	case errors.Is(err, ErrInvalidOAuthState):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, ErrProviderNotConfigured):
 		writeError(w, http.StatusNotImplemented, err.Error())
+	case errors.Is(err, ErrSessionNotFound), errors.Is(err, ErrSessionDeviceMismatch), errors.Is(err, ErrInvalidToken):
+		writeError(w, http.StatusUnauthorized, err.Error())
+	case errors.Is(err, ErrAccountNotActive):
+		writeError(w, http.StatusForbidden, err.Error())
 	default:
 		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
 }
 
+func setRefreshCookie(w http.ResponseWriter, r *http.Request, token string, expiresAt time.Time) {
+	cookie := &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    token,
+		Path:     "/api/v1/auth",
+		HttpOnly: true,
+		Secure:   isSecureRequest(r),
+		SameSite: http.SameSiteLaxMode,
+		Expires:  expiresAt,
+	}
+	http.SetCookie(w, cookie)
+}
 
-//here onward we are dealing with the Agent Heartbeat and Monitor CheckResult models, which are used for monitoring and tracking the status of agents and monitors in the system. The Heartbeat model captures the state of an agent, including its IP address, version, latency, memory usage, CPU usage, and status. The CheckResult model records the outcome of a monitor check, including the status code, response time, success flag, error message (if any), and the timestamp of when the check was performed. These models are essential for maintaining the health and performance of the system's monitoring infrastructure.
+func clearRefreshCookie(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    "",
+		Path:     "/api/v1/auth",
+		HttpOnly: true,
+		Secure:   isSecureRequest(r),
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+	})
+}
+
+func readRefreshCookie(r *http.Request) (string, error) {
+	cookie, err := r.Cookie(refreshCookieName)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(cookie.Value), nil
+}
+
+func bearerToken(value string) string {
+	parts := strings.Fields(value)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return ""
+	}
+	return parts[1]
+}
+
+func populateRequestContext(r *http.Request, deviceIdentity *string) {
+	if deviceIdentity == nil || strings.TrimSpace(*deviceIdentity) != "" {
+		return
+	}
+	if value := strings.TrimSpace(r.Header.Get("X-Device-Identity")); value != "" {
+		*deviceIdentity = value
+	}
+}
+
+func isSecureRequest(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")), "https")
+}
+
+func clientIP(r *http.Request) string {
+	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		if ip := strings.TrimSpace(parts[0]); ip != "" {
+			return ip
+		}
+	}
+	if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); realIP != "" {
+		return realIP
+	}
+	return strings.TrimSpace(r.RemoteAddr)
+}

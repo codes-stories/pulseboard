@@ -12,16 +12,16 @@ function ArrowIcon() {
 
 function DashboardMockup() {
   return (
-    <div className="relative overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-[color:var(--card-solid)] p-4 shadow-2xl shadow-black/40">
-      <div className="absolute right-8 top-8 h-36 w-36 rounded-full bg-blue-500/20 blur-3xl" />
-      <div className="absolute left-2 top-16 h-28 w-28 rounded-full bg-cyan-400/15 blur-3xl" />
-      <div className="glass-panel relative rounded-[28px] p-5">
+    <div className="relative overflow-hidden rounded-lg border border-[color:var(--border)] bg-[color:var(--card-solid)] p-4 shadow-lg shadow-black/15">
+      <div className="absolute right-8 top-8 h-36 w-36 rounded-full bg-amber-500/20 blur-3xl" />
+      <div className="absolute left-2 top-16 h-28 w-28 rounded-full bg-orange-500/15 blur-3xl" />
+      <div className="glass-panel relative rounded-lg p-5">
         <div className="flex items-center justify-between text-sm text-[color:var(--muted)]">
           <span>PulseBoard overview</span>
           <span>Last 24 hours</span>
         </div>
         <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <GlassCard className="bg-gradient-to-br from-blue-500/20 to-slate-950/5">
+          <GlassCard className="bg-gradient-to-br from-amber-500/15 to-transparent">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm text-[color:var(--muted)]">Global uptime</p>
@@ -42,7 +42,7 @@ function DashboardMockup() {
             </div>
             <div className="mt-4 space-y-3">
               {dashboardAlerts.map((alert) => (
-                <div key={alert.title} className="rounded-2xl border border-[color:var(--border)] px-4 py-3">
+                <div key={alert.title} className="rounded-md border border-[color:var(--border)] px-4 py-3">
                   <p className="text-sm font-medium">{alert.title}</p>
                   <p className="mt-1 text-xs text-[color:var(--muted)]">{alert.time}</p>
                 </div>
@@ -89,7 +89,7 @@ export function LandingPage() {
             <p className="section-kicker">What teams get</p>
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               {heroBullets.map((bullet) => (
-                <div key={bullet} className="rounded-2xl border border-[color:var(--border)] px-4 py-4 text-sm text-[color:var(--muted)]">{bullet}</div>
+                <div key={bullet} className="rounded-md border border-[color:var(--border)] px-4 py-4 text-sm text-[color:var(--muted)]">{bullet}</div>
               ))}
             </div>
           </GlassCard>
@@ -133,7 +133,7 @@ export function LandingPage() {
             </div>
             <div className="mt-5 space-y-4">
               {incidentTimeline.map((item) => (
-                <div key={item.title} className="flex items-start gap-4 rounded-2xl border border-[color:var(--border)] px-4 py-3">
+                <div key={item.title} className="flex items-start gap-4 rounded-md border border-[color:var(--border)] px-4 py-3">
                   <span className="mt-1 h-3 w-3 rounded-full bg-[color:var(--primary)]" />
                   <div>
                     <p className="font-medium">{item.title}</p>
@@ -147,7 +147,7 @@ export function LandingPage() {
             <h3 className="text-xl font-semibold">Latest alerts</h3>
             <div className="mt-5 space-y-3">
               {dashboardAlerts.map((alert) => (
-                <div key={alert.title} className="rounded-2xl border border-[color:var(--border)] px-4 py-3">
+                <div key={alert.title} className="rounded-md border border-[color:var(--border)] px-4 py-3">
                   <p className="font-medium">{alert.title}</p>
                   <p className="text-sm text-[color:var(--muted)]">{alert.time}</p>
                 </div>
@@ -174,7 +174,7 @@ export function LandingPage() {
       <SectionShell eyebrow="Pricing preview" title="Simple pricing with a path to enterprise control." copy="Choose the tier that matches your monitoring footprint.">
         <CardGrid>
           {pricingPlans.map((plan) => (
-            <GlassCard key={plan.name} className={plan.featured ? "border-blue-500/40" : ""}>
+            <GlassCard key={plan.name} className={plan.featured ? "border-[color:var(--primary)]/40" : ""}>
               {plan.featured ? <span className="chip chip-success">Most popular</span> : null}
               <h3 className="mt-5 text-2xl font-semibold">{plan.name}</h3>
               <p className="mt-2 text-sm text-[color:var(--muted)]">{plan.detail}</p>
@@ -199,7 +199,7 @@ export function LandingPage() {
       </SectionShell>
 
       <SectionShell eyebrow="Call to action" title="Keep watch with confidence." align="center">
-        <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 rounded-[32px] border border-[color:var(--border)] bg-gradient-to-br from-blue-500/20 via-transparent to-cyan-500/10 p-8 text-center">
+        <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 rounded-lg border border-[color:var(--border)] bg-gradient-to-br from-amber-500/15 via-transparent to-orange-500/5 p-8 text-center">
           <p className="max-w-2xl text-[color:var(--muted)]">Start free, book a demo, or review the product docs. PulseBoard stays legible under pressure and polished in front of customers.</p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link href="/register" className="btn btn-primary">Start Free <ArrowIcon /></Link>
@@ -214,12 +214,12 @@ export function LandingPage() {
 export function PricingPage() {
   return (
     <>
-      <PageHero eyebrow="Pricing" title="Plans that scale with your monitoring surface." copy="Simple monthly pricing for teams that need dependable uptime signal." actions={<><Link href="/register" className="btn btn-primary">Start Free <ArrowIcon /></Link><Link href="/contact" className="btn btn-secondary">Talk to Sales</Link></>} image={<GlassCard><div className="grid gap-4 md:grid-cols-3">{pricingPlans.map((plan) => <div key={plan.name} className={`rounded-3xl border border-[color:var(--border)] p-5 bg-gradient-to-br ${plan.accent} ${plan.featured ? "ring-1 ring-blue-500/40" : ""}`}><h3 className="text-xl font-semibold">{plan.name}</h3><p className="mt-2 text-sm text-[color:var(--muted)]">{plan.detail}</p><p className="mt-5 text-4xl font-semibold">{plan.price}</p></div>)}</div></GlassCard>} />
+      <PageHero eyebrow="Pricing" title="Plans that scale with your monitoring surface." copy="Simple monthly pricing for teams that need dependable uptime signal." actions={<><Link href="/register" className="btn btn-primary">Start Free <ArrowIcon /></Link><Link href="/contact" className="btn btn-secondary">Talk to Sales</Link></>} image={<GlassCard><div className="grid gap-4 md:grid-cols-3">{pricingPlans.map((plan) => <div key={plan.name} className={`rounded-lg border border-[color:var(--border)] p-5 bg-gradient-to-br ${plan.accent} ${plan.featured ? "ring-1 ring-[color:var(--primary)]/40" : ""}`}><h3 className="text-xl font-semibold">{plan.name}</h3><p className="mt-2 text-sm text-[color:var(--muted)]">{plan.detail}</p><p className="mt-5 text-4xl font-semibold">{plan.price}</p></div>)}</div></GlassCard>} />
 
       <SectionShell eyebrow="Plans" title="Built for teams at every stage.">
         <CardGrid>
           {pricingPlans.map((plan) => (
-            <GlassCard key={plan.name} className={plan.featured ? "border-blue-500/40" : ""}>
+            <GlassCard key={plan.name} className={plan.featured ? "border-[color:var(--primary)]/40" : ""}>
               {plan.featured ? <span className="chip chip-success">Recommended</span> : null}
               <h3 className="mt-5 text-2xl font-semibold">{plan.name}</h3>
               <p className="mt-2 text-sm text-[color:var(--muted)]">{plan.detail}</p>
@@ -303,7 +303,7 @@ export function FeaturesPage() {
 export function DocsPage() {
   return (
     <>
-      <PageHero eyebrow="Documentation" title="Documentation designed like a product, not a file tree." copy="Search, browse, and launch with confidence from a docs homepage that feels modern and organized." actions={<><Link href="/docs#guides" className="btn btn-primary">Popular guides <ArrowIcon /></Link><Link href="/docs#api" className="btn btn-secondary">API reference</Link></>} image={<GlassCard><div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--bg-elevated)] p-4"><div className="flex items-center gap-3 rounded-2xl border border-[color:var(--border)] px-4 py-3 text-sm text-[color:var(--muted)]">Search docs</div><div className="mt-4 grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-[color:var(--border)] p-4"><p className="text-sm text-[color:var(--muted)]">Popular guides</p><div className="mt-3 space-y-2 text-sm">{docsGuides.slice(0, 3).map((guide) => <div key={guide}>{guide}</div>)}</div></div><div className="rounded-2xl border border-[color:var(--border)] p-4"><p className="text-sm text-[color:var(--muted)]">SDKs</p><p className="mt-3 text-sm text-[color:var(--muted)]">TypeScript, Go, and Erlang client stubs.</p></div></div></div></GlassCard>} />
+      <PageHero eyebrow="Documentation" title="Documentation designed like a product, not a file tree." copy="Search, browse, and launch with confidence from a docs homepage that feels modern and organized." actions={<><Link href="/docs#guides" className="btn btn-primary">Popular guides <ArrowIcon /></Link><Link href="/docs#api" className="btn btn-secondary">API reference</Link></>} image={<GlassCard><div className="rounded-md border border-[color:var(--border)] bg-[color:var(--bg-elevated)] p-4"><div className="flex items-center gap-3 rounded-md border border-[color:var(--border)] px-4 py-3 text-sm text-[color:var(--muted)]">Search docs</div><div className="mt-4 grid gap-3 md:grid-cols-2"><div className="rounded-md border border-[color:var(--border)] p-4"><p className="text-sm text-[color:var(--muted)]">Popular guides</p><div className="mt-3 space-y-2 text-sm">{docsGuides.slice(0, 3).map((guide) => <div key={guide}>{guide}</div>)}</div></div><div className="rounded-md border border-[color:var(--border)] p-4"><p className="text-sm text-[color:var(--muted)]">SDKs</p><p className="mt-3 text-sm text-[color:var(--muted)]">TypeScript, Go, and Erlang client stubs.</p></div></div></div></GlassCard>} />
 
       <SectionShell eyebrow="Popular guides" title="Find the right path quickly." copy="Common entry points for teams launching PulseBoard.">
         <CardGrid>
@@ -324,8 +324,8 @@ export function DocsPage() {
               ["GET /alerts", "Query alert history and routing state."],
               ["POST /status-pages", "Publish branded public status pages."],
             ].map((item) => (
-              <div key={item[0]} className="rounded-3xl border border-[color:var(--border)] p-5">
-                <p className="font-mono text-sm text-blue-300">{item[0]}</p>
+              <div key={item[0]} className="rounded-lg border border-[color:var(--border)] p-5">
+                <p className="font-mono text-sm text-[color:var(--primary)]">{item[0]}</p>
                 <p className="mt-3 text-sm text-[color:var(--muted)]">{item[1]}</p>
               </div>
             ))}
@@ -339,7 +339,7 @@ export function DocsPage() {
 export function BlogPage() {
   return (
     <>
-      <PageHero eyebrow="Blog" title="Product thinking, engineering notes, and monitoring patterns." copy="A blog listing with a featured story, categories, search, and newsletter prompt." actions={<><Link href="/blog#featured" className="btn btn-primary">Featured article <ArrowIcon /></Link><Link href="/contact" className="btn btn-secondary">Subscribe</Link></>} image={<GlassCard><div className="h-72 rounded-[24px] border border-[color:var(--border)] bg-gradient-to-br from-blue-500/20 to-transparent p-5"><p className="section-kicker">Featured article</p><h3 className="mt-5 text-3xl font-semibold tracking-tight">How to design an alert system people actually trust</h3><p className="mt-4 text-[color:var(--muted)]">A practical breakdown of signal quality, routing, escalation, and the line between useful and noisy.</p></div></GlassCard>} />
+      <PageHero eyebrow="Blog" title="Product thinking, engineering notes, and monitoring patterns." copy="A blog listing with a featured story, categories, search, and newsletter prompt." actions={<><Link href="/blog#featured" className="btn btn-primary">Featured article <ArrowIcon /></Link><Link href="/contact" className="btn btn-secondary">Subscribe</Link></>} image={<GlassCard><div className="h-72 rounded-md border border-[color:var(--border)] bg-gradient-to-br from-amber-500/15 to-transparent p-5"><p className="section-kicker">Featured article</p><h3 className="mt-5 text-3xl font-semibold tracking-tight">How to design an alert system people actually trust</h3><p className="mt-4 text-[color:var(--muted)]">A practical breakdown of signal quality, routing, escalation, and the line between useful and noisy.</p></div></GlassCard>} />
 
       <SectionShell eyebrow="Categories" title="A focused reading list.">
         <div className="flex flex-wrap gap-3">
@@ -374,7 +374,7 @@ export function BlogPage() {
 export function AboutPage() {
   return (
     <>
-      <PageHero eyebrow="About" title="Built to make uptime feel legible and trustworthy." copy="Mission, vision, architecture, and the rationale behind Erlang-based agents." actions={<><Link href="/contact" className="btn btn-primary">Talk to us <ArrowIcon /></Link><Link href="/docs" className="btn btn-secondary">Read more</Link></>} image={<GlassCard><div className="space-y-4">{aboutPoints.map((point) => <div key={point} className="rounded-2xl border border-[color:var(--border)] px-4 py-4 text-sm text-[color:var(--muted)]">{point}</div>)}</div></GlassCard>} />
+      <PageHero eyebrow="About" title="Built to make uptime feel legible and trustworthy." copy="Mission, vision, architecture, and the rationale behind Erlang-based agents." actions={<><Link href="/contact" className="btn btn-primary">Talk to us <ArrowIcon /></Link><Link href="/docs" className="btn btn-secondary">Read more</Link></>} image={<GlassCard><div className="space-y-4">{aboutPoints.map((point) => <div key={point} className="rounded-md border border-[color:var(--border)] px-4 py-4 text-sm text-[color:var(--muted)]">{point}</div>)}</div></GlassCard>} />
 
       <SectionShell eyebrow="Mission" title="Reduce uncertainty for teams that ship critical APIs.">
         <GlassCard>
@@ -403,7 +403,7 @@ export function AboutPage() {
 export function ContactPage() {
   return (
     <>
-      <PageHero eyebrow="Contact" title="Talk to the team building PulseBoard." copy="A premium contact surface with email, Discord, and GitHub references plus a clear form." actions={<><Link href="mailto:hello@pulseboard.dev" className="btn btn-primary">Email us <ArrowIcon /></Link><Link href="https://github.com" className="btn btn-secondary">GitHub</Link></>} image={<GlassCard><div className="space-y-3">{contactChannels.map((channel) => <div key={channel} className="rounded-2xl border border-[color:var(--border)] px-4 py-4 text-sm text-[color:var(--muted)]">{channel}</div>)}</div></GlassCard>} />
+      <PageHero eyebrow="Contact" title="Talk to the team building PulseBoard." copy="A premium contact surface with email, Discord, and GitHub references plus a clear form." actions={<><Link href="mailto:hello@pulseboard.dev" className="btn btn-primary">Email us <ArrowIcon /></Link><Link href="https://github.com" className="btn btn-secondary">GitHub</Link></>} image={<GlassCard><div className="space-y-3">{contactChannels.map((channel) => <div key={channel} className="rounded-md border border-[color:var(--border)] px-4 py-4 text-sm text-[color:var(--muted)]">{channel}</div>)}</div></GlassCard>} />
 
       <SectionShell eyebrow="Message us" title="Send a note and we’ll route it to the right team.">
         <GlassCard>

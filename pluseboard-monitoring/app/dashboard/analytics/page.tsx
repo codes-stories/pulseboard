@@ -15,7 +15,7 @@ export default function AnalyticsPage() {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <InlineChart title="Response Time" value="182ms" rows={[50, 55, 61, 65, 70, 76, 68, 74, 82, 78, 70, 80]} />
-        <InlineChart title="Availability" value="99.97%" rows={[80, 82, 84, 88, 90, 92, 93, 94, 96, 97, 98, 99]} accent="from-emerald-500/20 to-cyan-500/10" />
+        <InlineChart title="Availability" value="99.97%" rows={[80, 82, 84, 88, 90, 92, 93, 94, 96, 97, 98, 99]} accent="from-emerald-500/15 to-emerald-500/5" />
       </div>
       <GlassCard>
         <h2 className="text-xl font-semibold">Top slow endpoints</h2>

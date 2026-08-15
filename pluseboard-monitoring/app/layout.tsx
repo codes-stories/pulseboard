@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "../design-system/theme/theme-provider";
+import { Providers } from "../components/providers";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
@@ -19,7 +21,14 @@ export default function RootLayout({
       suppressHydrationWarning
       className="h-full antialiased"
     >
-      <body className="min-h-full flex flex-col"><ThemeProvider>{children}</ThemeProvider></body>
+      <body className="min-h-full flex flex-col">
+        <Script id="pulseboard-theme-init" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem("pulseboard-theme");var d=t==="dark"||t==="light"?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=d;}catch(e){document.documentElement.dataset.theme="light";}})();`}
+        </Script>
+        <ThemeProvider>
+          <Providers>{children}</Providers>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
