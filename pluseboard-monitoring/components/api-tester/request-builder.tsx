@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Braces, Check, Copy, Eraser, Eye, EyeOff, Loader2, Plus, Send, Wand2, X } from "lucide-react";
-import type { AuthState, BodyState, BodyType, KVRow, RequestState } from "./workspace-types";
+import type { ExecutionMode } from "@/lib/api-execution";
+import type { AuthState, BodyState, BodyType, KVRow, RequestState, SendError } from "./workspace-types";
 import { COMMON_HEADERS, METHODS, SEND_SHORTCUT, emptyKV, methodText, prettyJSON } from "./helpers";
 import { KeyValueTable } from "./key-value-table";
 import { CookieEditor } from "./cookie-editor";
@@ -20,9 +21,13 @@ interface RequestBuilderProps {
   tab: RequestTab;
   onTabChange: (tab: RequestTab) => void;
   sending: boolean;
-  sendError: string | null;
+  sendError: SendError | null;
+  mode: ExecutionMode;
+  onModeChange: (mode: ExecutionMode) => void;
   onSend: () => void;
   onCancel: () => void;
+  onRetry: () => void;
+  onSwitchToProxy: () => void;
   onDismissError: () => void;
 }
 
@@ -40,8 +45,12 @@ export function RequestBuilder({
   onTabChange,
   sending,
   sendError,
+  mode,
+  onModeChange,
   onSend,
   onCancel,
+  onRetry,
+  onSwitchToProxy,
   onDismissError,
 }: Readonly<RequestBuilderProps>) {
   const [showToken, setShowToken] = useState(false);
@@ -78,6 +87,25 @@ export function RequestBuilder({
           spellCheck={false}
         />
 
+        <div
+          className="flex shrink-0 items-center gap-0.5 rounded-md border border-[color:var(--border)] bg-[color:var(--card-soft)] p-0.5"
+          role="group"
+          aria-label="Execution mode"
+        >
+          <ModeButton
+            label="Direct"
+            active={mode === "direct"}
+            title="Direct: send the request directly from your browser to the target API. The target API must allow your browser origin through CORS."
+            onClick={() => onModeChange("direct")}
+          />
+          <ModeButton
+            label="Proxy"
+            active={mode === "proxy"}
+            title="Proxy: send the request through the PulseBoard backend. Useful when the target API does not support browser CORS."
+            onClick={() => onModeChange("proxy")}
+          />
+        </div>
+
         {sending ? (
           <button className="btn btn-secondary px-3!" type="button" onClick={onCancel} title="Cancel request">
             <X className="h-4 w-4" />
@@ -99,12 +127,29 @@ export function RequestBuilder({
       </div>
 
       {sendError ? (
-        <div className="flex items-start justify-between gap-2 border-b border-[color:var(--border)] bg-[color:var(--danger)]/10 px-3 py-2">
-          <p className="font-mono text-[0.78rem] text-[color:var(--danger)]">{sendError}</p>
-          <button className="icon-btn shrink-0 text-[color:var(--danger)]" type="button" title="Dismiss" onClick={onDismissError}>
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        sendError.cors ? (
+          <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--border)] bg-[color:var(--warning)]/10 px-3 py-2">
+            <p className="min-w-0 flex-1 font-mono text-[0.76rem] text-[color:var(--warning)]">{sendError.message}</p>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button className="btn btn-ghost text-sm" type="button" onClick={onRetry} title="Retry the request from the browser">
+                Retry Direct
+              </button>
+              <button className="btn btn-primary text-sm" type="button" onClick={onSwitchToProxy} title="Resend through the PulseBoard backend">
+                Use Proxy
+              </button>
+              <button className="icon-btn" type="button" title="Dismiss" onClick={onDismissError}>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-2 border-b border-[color:var(--border)] bg-[color:var(--danger)]/10 px-3 py-2">
+            <p className="font-mono text-[0.78rem] text-[color:var(--danger)]">{sendError.message}</p>
+            <button className="icon-btn shrink-0 text-[color:var(--danger)]" type="button" title="Dismiss" onClick={onDismissError}>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )
       ) : null}
 
       <div className="workspace-tabs" role="tablist" aria-label="Request configuration">
@@ -200,6 +245,22 @@ function Tab({ label, count, dot, active, onClick }: Readonly<{ label: string; c
       {label}
       {dot ? <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--primary)]" aria-label="active" /> : null}
       {typeof count === "number" && count > 0 ? <span className="tab-count">{count}</span> : null}
+    </button>
+  );
+}
+
+function ModeButton({ label, active, title, onClick }: Readonly<{ label: string; active: boolean; title: string; onClick: () => void }>) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-pressed={active}
+      onClick={onClick}
+      className={`rounded px-2 py-0.5 font-mono text-[0.66rem] font-bold uppercase tracking-wider transition-colors ${
+        active ? "bg-[color:var(--primary)]/15 text-[color:var(--primary)]" : "text-[color:var(--faint)] hover:text-[color:var(--muted)]"
+      }`}
+    >
+      {label}
     </button>
   );
 }
