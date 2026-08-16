@@ -7,9 +7,8 @@ import { Loader2, PanelLeft, Play, Save, Sparkles, X } from "lucide-react";
 import * as api from "@/lib/api";
 import { ApiError } from "@/lib/api";
 import type { APITest, PayloadExample, ProxyResponse } from "@/lib/types";
-import { executeApiRequest, RequestExecutionError, type ExecutionMode } from "@/lib/api-execution";
 import { useAuth } from "@/components/auth-provider";
-import type { HistoryEntry, KVRow, RequestState, SendError } from "./workspace-types";
+import type { HistoryEntry, KVRow, RequestState } from "./workspace-types";
 import {
   byteLength,
   defaultRequest,
@@ -20,7 +19,7 @@ import {
   objectToRows,
   parsePathParamsFromURL,
   parseQueryIntoParams,
-  buildApiRequest,
+  buildProxyRequest,
   urlFromQuery,
 } from "./helpers";
 import { RequestBuilder, type RequestTab } from "./request-builder";
@@ -32,7 +31,6 @@ const STORAGE_HISTORY = "pb-api-history";
 const STORAGE_HISTORY_WIDTH = "pb-api-hw";
 const STORAGE_RESPONSE_WIDTH = "pb-api-rw";
 const STORAGE_HISTORY_OPEN = "pb-api-historyopen";
-const STORAGE_EXECUTION_MODE = "pb-api-mode";
 
 type ResponseTab = "body" | "headers" | "cookies" | "raw" | "preview";
 
@@ -64,24 +62,11 @@ export function ApiWorkspace() {
   const [response, setResponse] = useState<ProxyResponse | null>(null);
   const [receivedAt, setReceivedAt] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<SendError | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [requestTab, setRequestTab] = useState<RequestTab>("params");
   const [responseTab, setResponseTab] = useState<ResponseTab>("body");
   const [lastExample, setLastExample] = useState<unknown | undefined>(undefined);
   const controllerRef = useRef<AbortController | null>(null);
-
-  const [executionMode, setExecutionModeState] = useState<ExecutionMode>(() =>
-    loadJSON<ExecutionMode>(STORAGE_EXECUTION_MODE, "direct"),
-  );
-  const executionModeRef = useRef<ExecutionMode>(executionMode);
-  const setExecutionMode = useCallback((mode: ExecutionMode) => {
-    executionModeRef.current = mode;
-    setExecutionModeState(mode);
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE_EXECUTION_MODE, executionMode);
-  }, [executionMode]);
 
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadJSON<HistoryEntry[]>(STORAGE_HISTORY, []));
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
@@ -166,7 +151,7 @@ export function ApiWorkspace() {
     async (override: RequestState | null) => {
       const current = override ?? requestRef.current;
       if (!current.url.trim()) {
-        setSendError({ message: "Enter a URL to test.", cors: false });
+        setSendError("Enter a URL to test.");
         return;
       }
       setSendError(null);
@@ -174,9 +159,9 @@ export function ApiWorkspace() {
       setActiveHistoryId(null);
       const controller = new AbortController();
       controllerRef.current = controller;
-      const built = buildApiRequest(current);
+      const built = buildProxyRequest(current);
       try {
-        const result = await executeApiRequest(built, executionModeRef.current, controller.signal);
+        const result = await api.proxyRequest(built, controller.signal);
         setResponse(result);
         setReceivedAt(Date.now());
         setLastExample(encodeBody(current.body.text));
@@ -186,15 +171,11 @@ export function ApiWorkspace() {
         );
       } catch (error) {
         if (controller.signal.aborted) {
-          setSendError({ message: "Request cancelled.", cors: false });
+          setSendError("Request cancelled.");
         } else {
           setResponse(null);
           setReceivedAt(null);
-          if (error instanceof RequestExecutionError) {
-            setSendError({ message: error.message, cors: error.corsBlocked });
-          } else {
-            setSendError({ message: message(error), cors: false });
-          }
+          setSendError(message(error));
         }
         pushHistory({ method: built.method, url: built.url }, current);
       } finally {
@@ -208,17 +189,6 @@ export function ApiWorkspace() {
   const send = useCallback(() => {
     void sendWith(null);
   }, [sendWith]);
-
-  const retry = useCallback(() => {
-    setSendError(null);
-    void sendWith(null);
-  }, [sendWith]);
-
-  const switchToProxy = useCallback(() => {
-    setExecutionMode("proxy");
-    setSendError(null);
-    void sendWith(null);
-  }, [sendWith, setExecutionMode]);
 
   const cancel = useCallback(() => {
     controllerRef.current?.abort();
@@ -524,12 +494,8 @@ export function ApiWorkspace() {
             onTabChange={setRequestTab}
             sending={sending}
             sendError={sendError}
-            mode={executionMode}
-            onModeChange={setExecutionMode}
             onSend={() => void send()}
             onCancel={cancel}
-            onRetry={() => void retry()}
-            onSwitchToProxy={() => void switchToProxy()}
             onDismissError={() => setSendError(null)}
           />
         </div>
@@ -548,7 +514,6 @@ export function ApiWorkspace() {
             requestMethod={request.method}
             requestURL={request.url}
             receivedAt={receivedAt}
-            mode={executionMode}
             tab={responseTab}
             onTabChange={setResponseTab}
           />

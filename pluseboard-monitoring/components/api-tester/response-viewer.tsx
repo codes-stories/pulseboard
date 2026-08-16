@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Braces, Check, ChevronsDownUp, ChevronsUpDown, Copy, Eraser, Eye, Radio, Search, Wand2 } from "lucide-react";
 import type { HTTPMethod, ProxyResponse } from "@/lib/types";
-import type { ExecutionMode } from "@/lib/api-execution";
 import { SEND_SHORTCUT, byteLength, formatBytes, formatClock, isJSON, methodTone, prettyJSON, shortURL, statusTone } from "./helpers";
 import { type ExpansionSignal, JSONViewer } from "./json-viewer";
 
@@ -22,7 +21,6 @@ interface ResponseViewerProps {
   requestMethod: HTTPMethod;
   requestURL: string;
   receivedAt: number | null;
-  mode: ExecutionMode;
   tab: ResponseTab;
   onTabChange: (tab: ResponseTab) => void;
 }
@@ -56,7 +54,7 @@ function CopyButton({ copied, onCopy }: Readonly<{ copied: boolean; onCopy: () =
   );
 }
 
-export function ResponseViewer({ response, sending, requestMethod, requestURL, receivedAt, mode, tab, onTabChange }: Readonly<ResponseViewerProps>) {
+export function ResponseViewer({ response, sending, requestMethod, requestURL, receivedAt, tab, onTabChange }: Readonly<ResponseViewerProps>) {
   const [search, setSearch] = useState("");
   const [expansion, setExpansion] = useState<ExpansionSignal | null>(null);
   const [copiedKey, copy] = useCopy();
@@ -133,7 +131,7 @@ export function ResponseViewer({ response, sending, requestMethod, requestURL, r
         </div>
 
         <div className="flex shrink-0 items-center gap-3 font-mono text-[0.7rem] text-[color:var(--faint)]">
-          <span>{mode === "proxy" ? "Proxy" : "Direct"} · {Number(response.duration_ms).toFixed(0)} ms</span>
+          <span>{Number(response.duration_ms).toFixed(0)} ms</span>
           <span>{formatBytes(size)}</span>
           <span>{receivedAt ? formatClock(receivedAt) : "—"}</span>
         </div>

@@ -1,5 +1,4 @@
 import type { HTTPMethod } from "@/lib/types";
-import type { ApiRequest } from "@/lib/api-execution";
 import type { AuthState, BodyState, KVRow, RequestState } from "./workspace-types";
 
 export const METHODS: HTTPMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
@@ -248,7 +247,7 @@ interface BodyResult {
 
 export function bodyForSend(body: BodyState): BodyResult {
   if (body.type === "none" || !body.text.trim()) return {};
-  if (body.type === "json") return { body: encodeBody(body.text), headers: { "Content-Type": "application/json" } };
+  if (body.type === "json") return { body: encodeBody(body.text) };
   if (body.type === "form") {
     const params = new URLSearchParams();
     for (const line of body.text.split("\n")) {
@@ -258,10 +257,17 @@ export function bodyForSend(body: BodyState): BodyResult {
     }
     return { body: params.toString(), headers: { "Content-Type": "application/x-www-form-urlencoded" } };
   }
-  return { body: body.text, headers: { "Content-Type": "text/plain" } };
+  return { body: body.text };
 }
 
-export function buildApiRequest(request: RequestState): ApiRequest {
+export interface BuiltRequest {
+  method: HTTPMethod;
+  url: string;
+  headers: Record<string, string>;
+  body?: unknown;
+}
+
+export function buildProxyRequest(request: RequestState): BuiltRequest {
   const headers = headersObject(request.headers);
   const cookie = cookieHeader(request.cookies);
   const { headers: authHeaders, url } = applyAuth(request.auth, applyPathParams(request.url, request.pathParams));
