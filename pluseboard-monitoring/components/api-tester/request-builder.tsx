@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Braces, Check, Copy, Eraser, Eye, EyeOff, Loader2, Plus, Send, Wand2, X } from "lucide-react";
+import { Braces, Check, Copy, Eraser, Eye, EyeOff, Loader2, Plus, Send, ShieldAlert, Wand2, X } from "lucide-react";
 import type { ExecutionMode } from "@/lib/api-execution";
 import type { AuthState, BodyState, BodyType, KVRow, RequestState, SendError } from "./workspace-types";
-import { COMMON_HEADERS, METHODS, SEND_SHORTCUT, emptyKV, methodText, prettyJSON } from "./helpers";
+import { COMMON_HEADERS, METHODS, SEND_SHORTCUT, classifyTarget, emptyKV, methodText, prettyJSON, targetHint, targetLabel, targetTone } from "./helpers";
 import { KeyValueTable } from "./key-value-table";
 import { CookieEditor } from "./cookie-editor";
 import { LineEditor } from "./line-editor";
@@ -24,6 +24,8 @@ interface RequestBuilderProps {
   sendError: SendError | null;
   mode: ExecutionMode;
   onModeChange: (mode: ExecutionMode) => void;
+  allowPrivate: boolean;
+  onAllowPrivateChange: (value: boolean) => void;
   onSend: () => void;
   onCancel: () => void;
   onRetry: () => void;
@@ -47,6 +49,8 @@ export function RequestBuilder({
   sendError,
   mode,
   onModeChange,
+  allowPrivate,
+  onAllowPrivateChange,
   onSend,
   onCancel,
   onRetry,
@@ -62,6 +66,8 @@ export function RequestBuilder({
   const headerCount = activeCount(request.headers);
   const cookieCount = activeCount(request.cookies);
   const authActive = request.auth.type !== "none";
+  const targetType = useMemo(() => classifyTarget(request.url), [request.url]);
+  const isInternalTarget = targetType !== "public";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[color:var(--bg)]">
@@ -86,6 +92,26 @@ export function RequestBuilder({
           placeholder="https://api.example.com/v1/endpoint"
           spellCheck={false}
         />
+
+        <span className={`target-chip shrink-0 ${targetTone[targetType]}`} title={targetHint[targetType]}>
+          {targetLabel[targetType]}
+        </span>
+
+        {isInternalTarget ? (
+          <label
+            className="flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-md border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 px-2 py-1"
+            title="The PulseBoard proxy blocks local/private targets by default. Enable to test them."
+          >
+            <ShieldAlert className="h-3.5 w-3.5 text-[color:var(--warning)]" />
+            <input
+              type="checkbox"
+              className="accent-[color:var(--primary)]"
+              checked={allowPrivate}
+              onChange={(event) => onAllowPrivateChange(event.target.checked)}
+            />
+            <span className="text-[0.68rem] font-bold text-[color:var(--warning)]">Allow local/private</span>
+          </label>
+        ) : null}
 
         <div
           className="flex shrink-0 items-center gap-0.5 rounded-md border border-[color:var(--border)] bg-[color:var(--card-soft)] p-0.5"

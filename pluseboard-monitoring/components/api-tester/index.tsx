@@ -68,6 +68,7 @@ export function ApiWorkspace() {
   const [receivedAt, setReceivedAt] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<SendError | null>(null);
+  const [allowPrivate, setAllowPrivate] = useState(false);
   const [requestTab, setRequestTab] = useState<RequestTab>("params");
   const [responseTab, setResponseTab] = useState<ResponseTab>("body");
   const [lastExample, setLastExample] = useState<unknown | undefined>(undefined);
@@ -179,7 +180,11 @@ export function ApiWorkspace() {
       controllerRef.current = controller;
       const built = buildApiRequest(current);
       try {
-        const result = await executeApiRequest(built, executionModeRef.current, controller.signal);
+        const result = await executeApiRequest(
+          { ...built, allow_private: allowPrivate },
+          executionModeRef.current,
+          controller.signal,
+        );
         setResponse(result);
         setReceivedAt(Date.now());
         setLastExample(encodeBody(current.body.text));
@@ -205,7 +210,7 @@ export function ApiWorkspace() {
         controllerRef.current = null;
       }
     },
-    [pushHistory],
+    [pushHistory, allowPrivate],
   );
 
   const send = useCallback(() => {
@@ -529,6 +534,8 @@ export function ApiWorkspace() {
             sendError={sendError}
             mode={executionMode}
             onModeChange={setExecutionMode}
+            allowPrivate={allowPrivate}
+            onAllowPrivateChange={setAllowPrivate}
             onSend={() => void send()}
             onCancel={cancel}
             onRetry={() => void retry()}

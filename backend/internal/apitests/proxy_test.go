@@ -3,7 +3,10 @@ package apitests
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -40,6 +43,65 @@ func TestIsPrivateIP(t *testing.T) {
 		if got := isPrivateIP(net.ParseIP(address)); got != want {
 			t.Errorf("isPrivateIP(%s) = %v, want %v", address, got, want)
 		}
+	}
+}
+
+func TestCloudMetadataIP(t *testing.T) {
+	cases := map[string]bool{
+		"169.254.169.254": true,
+		"169.254.170.2":   true,
+		"100.100.100.200": true,
+		"fd00:ec2::254":   true,
+		"127.0.0.1":       false,
+		"192.168.1.1":     false,
+		"8.8.8.8":         false,
+	}
+	for address, want := range cases {
+		if got := isCloudMetadataIP(net.ParseIP(address)); got != want {
+			t.Errorf("isCloudMetadataIP(%s) = %v, want %v", address, got, want)
+		}
+	}
+}
+
+func TestSendRequestPrivateTargets(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer server.Close()
+
+	// Without allow_private the proxy refuses private targets.
+	blocked := NewService(nil, Config{})
+	_, err := blocked.SendRequest(context.Background(), ProxyRequest{
+		Method: "GET",
+		URL:    server.URL,
+	})
+	if !errors.Is(err, ErrUnsafeTarget) {
+		t.Fatalf("expected ErrUnsafeTarget for private target, got %v", err)
+	}
+
+	// With allow_private set, private targets are proxied.
+	allowed := NewService(nil, Config{})
+	response, err := allowed.SendRequest(context.Background(), ProxyRequest{
+		Method:       "GET",
+		URL:          server.URL,
+		AllowPrivate: true,
+	})
+	if err != nil {
+		t.Fatalf("expected private target to be allowed: %v", err)
+	}
+	if response.Status != http.StatusOK || response.Body != `{"ok":true}` {
+		t.Fatalf("unexpected response: %+v", response)
+	}
+
+	// Cloud metadata endpoints remain blocked even with allow_private.
+	metadata, err := allowed.SendRequest(context.Background(), ProxyRequest{
+		Method:       "GET",
+		URL:          "http://169.254.169.254/latest/meta-data/",
+		AllowPrivate: true,
+	})
+	if err == nil || !errors.Is(err, ErrUnsafeTarget) {
+		t.Fatalf("expected cloud metadata target to stay blocked, got %v (response %+v)", err, metadata)
 	}
 }
 

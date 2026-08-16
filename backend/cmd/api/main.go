@@ -77,13 +77,9 @@ func routes(pool *pgxpool.Pool, cfg *config.Config) http.Handler {
 	r.Use(middleware.Logger) // in production, use a more sophisticated logging middleware
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-<<<<<<< Updated upstream
-		AllowedOrigins:   splitCSV(fallback(os.Getenv("CORS_ALLOWED_ORIGIN"), "http://localhost:3000,http://127.0.0.1:3000")),
-=======
 		AllowOriginFunc: func(r *http.Request, origin string) bool {
 			return corsOriginAllowed(origin, splitCSV(fallback(os.Getenv("CORS_ALLOWED_ORIGIN"), "http://localhost:3000,http://127.0.0.1:3000")))
 		},
->>>>>>> Stashed changes
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -167,11 +163,8 @@ func fallback(value string, defaultValue string) string {
 	return value
 }
 
-<<<<<<< Updated upstream
-=======
 // splitCSV parses a comma-separated list (e.g. CORS_ALLOWED_ORIGIN) into a
 // trimmed slice of non-empty values.
->>>>>>> Stashed changes
 func splitCSV(value string) []string {
 	var parts []string
 	for _, part := range strings.Split(value, ",") {
@@ -182,8 +175,6 @@ func splitCSV(value string) []string {
 
 	return parts
 }
-<<<<<<< Updated upstream
-=======
 
 // corsOriginAllowed reports whether a browser origin may call the API. It
 // accepts exact matches from the configured allowlist, any Vercel deployment
@@ -207,4 +198,3 @@ func corsOriginAllowed(origin string, allowed []string) bool {
 	}
 	return false
 }
->>>>>>> Stashed changes

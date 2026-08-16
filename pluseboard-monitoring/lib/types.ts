@@ -99,6 +99,7 @@ export interface ProxyRequest {
   headers?: Record<string, string>;
   body?: unknown;
   timeout_ms?: number;
+  allow_private?: boolean;
 }
 
 export interface ProxyResponse {

@@ -10,6 +10,7 @@ export interface ApiRequest {
   url: string;
   headers: Record<string, string>;
   body?: unknown;
+  allow_private?: boolean;
 }
 
 export class RequestExecutionError extends Error {
