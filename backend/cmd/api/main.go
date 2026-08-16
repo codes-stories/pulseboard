@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -77,7 +76,7 @@ func routes(pool *pgxpool.Pool, cfg *config.Config) http.Handler {
 	r.Use(middleware.Logger) // in production, use a more sophisticated logging middleware
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   splitCSV(fallback(os.Getenv("CORS_ALLOWED_ORIGIN"), "http://localhost:3000,http://127.0.0.1:3000")),
+		AllowedOrigins:   []string{fallback(os.Getenv("CORS_ALLOWED_ORIGIN"), "http://localhost:3000")},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -159,15 +158,4 @@ func fallback(value string, defaultValue string) string {
 	}
 
 	return value
-}
-
-func splitCSV(value string) []string {
-	var parts []string
-	for _, part := range strings.Split(value, ",") {
-		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-
-	return parts
 }

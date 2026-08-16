@@ -47,8 +47,3 @@ export interface HistoryEntry {
   size?: number;
   request: RequestState;
 }
-
-export interface SendError {
-  message: string;
-  cors: boolean;
-}
