@@ -13,7 +13,9 @@
     ensure_defaults/0,
     configure_http/0,
     configure_postgres/0,
-    configure_redis/0
+    configure_redis/0,
+    configure_kafka/0,
+    configure_backend_sync/0
 ]).
 
 %% @doc Apply the full default environment set.
@@ -28,6 +30,8 @@ ensure_defaults() ->
     configure_http(),
     configure_postgres(),
     configure_redis(),
+    configure_kafka(),
+    configure_backend_sync(),
     ok.
 
 %% @doc Default the HTTP listener to the port used by the current setup.
@@ -41,7 +45,7 @@ configure_http() ->
 %% without changing application code, while still keeping safe defaults for
 %% local development.
 configure_postgres() ->
-    ensure_env(postgres_enabled, true),
+    ensure_env(postgres_enabled, false),
     ensure_env(postgres_host, "localhost"),
     ensure_env(postgres_port, 5432),
     ensure_env(postgres_database, "pulse_agent_v1"),
@@ -56,6 +60,25 @@ configure_redis() ->
     ensure_env(redis_host, "localhost"),
     ensure_env(redis_port, 6379),
     ensure_env(redis_database, 0).
+
+%% @doc Kafka configuration for log streaming.
+configure_kafka() ->
+    ensure_env(kafka_enabled, false),
+    ensure_env(kafka_brokers, "localhost:9092"),
+    ensure_env(kafka_client_id, "pulse_agent_v1"),
+    ensure_env(kafka_topic, "api-logs"),
+    ensure_env(kafka_acks, "all"),
+    ensure_env(kafka_batch_size, 16384),
+    ensure_env(kafka_linger_ms, 5),
+    ensure_env(kafka_compression, "none").
+
+%% @doc Backend sync configuration for fetching API logs.
+configure_backend_sync() ->
+    ensure_env(backend_api_url, "http://localhost:8080"),
+    ensure_env(backend_sync_enabled, false),
+    ensure_env(backend_sync_interval_ms, 30000),
+    ensure_env(backend_sync_batch_size, 100),
+    ensure_env(backend_api_key, "").
 
 ensure_env(Key, Default) ->
     case application:get_env(pulse_agent_v1, Key) of

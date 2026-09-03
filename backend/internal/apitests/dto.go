@@ -6,11 +6,12 @@ import "encoding/json"
 // user wants sent; a JSON string is interpreted as a raw text body, while any
 // object/array/number is forwarded verbatim.
 type ProxyRequest struct {
-	Method    string            `json:"method"`
-	URL       string            `json:"url"`
-	Headers   map[string]string `json:"headers,omitempty"`
-	Body      json.RawMessage   `json:"body,omitempty"`
-	TimeoutMS int               `json:"timeout_ms,omitempty"`
+	Method       string            `json:"method"`
+	URL          string            `json:"url"`
+	Headers      map[string]string `json:"headers,omitempty"`
+	Body         json.RawMessage   `json:"body,omitempty"`
+	TimeoutMS    int               `json:"timeout_ms,omitempty"`
+	AllowPrivate bool              `json:"allow_private,omitempty"`
 }
 
 type ProxyResponse struct {

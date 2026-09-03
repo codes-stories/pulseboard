@@ -19,9 +19,10 @@ init([]) ->
         #{
             %% PostgreSQL stays in the supervision tree so the adapter can be
             %% enabled by configuration without changing the process layout.
+            %% Transient so it doesn't crash the app when disabled/unavailable.
             id => db_pool,
             start => {psql_config, start_link, []},
-            restart => permanent,
+            restart => transient,
             shutdown => 5000,
             type => worker
         },
@@ -30,6 +31,22 @@ init([]) ->
             id => ets_store,
             start => {ets_config, start_link, []},
             restart => permanent,
+            shutdown => 5000,
+            type => worker
+        },
+        #{
+            %% Kafka producer for streaming API logs to Kafka.
+            id => kafka_producer,
+            start => {pulse_kafka_producer, start_link, []},
+            restart => transient,
+            shutdown => 5000,
+            type => worker
+        },
+        #{
+            %% Backend sync worker for fetching API logs from backend.
+            id => backend_sync,
+            start => {pulse_backend_sync, start_link, []},
+            restart => transient,
             shutdown => 5000,
             type => worker
         },

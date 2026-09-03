@@ -99,6 +99,7 @@ handle_call({append_log, Log}, _From, State) ->
             timestamp => Timestamp
         },
     persist_log(StoredLog),
+    publish_to_kafka(StoredLog),
     ets:insert(?LOGS_TABLE, {LogId, StoredLog}),
     {reply, {ok, StoredLog}, State};
 handle_call({get_agent, AgentId}, _From, State) ->
@@ -155,6 +156,14 @@ persist_heartbeat(AgentId, Status) ->
 
 persist_log(StoredLog) ->
     persist_result(psql_config:insert_log(StoredLog), "log").
+
+publish_to_kafka(StoredLog) ->
+    case kafka_config:enabled() of
+        true ->
+            pulse_kafka_producer:produce(StoredLog);
+        false ->
+            ok
+    end.
 
 persist_result({ok, _}, _Label) ->
     ok;
