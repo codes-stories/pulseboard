@@ -36,6 +36,9 @@ type ResponseTab = "body" | "headers" | "cookies" | "raw" | "preview";
 
 function message(error: unknown): string {
   if (error instanceof ApiError) return error.message;
+  if (error instanceof TypeError) {
+    return "Network error: could not reach the server. The server may be offline, or the request was blocked by the browser (CORS).";
+  }
   return "Something went wrong. Please try again.";
 }
 

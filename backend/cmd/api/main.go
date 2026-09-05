@@ -10,7 +10,9 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/pressly/goose/v3"
 
 	_ "github.com/gaurav/pulseboard/docs"
 	"github.com/gaurav/pulseboard/internal/agents"
@@ -49,6 +51,12 @@ func main() {
 		pool = dbPool
 		defer pool.Close()
 		log.Printf("database connection established: %v", dbPool.Stat().TotalConns())
+
+		// Run database migrations
+		if err := runMigrations(dbPool); err != nil {
+			log.Fatalf("database migration failed: %v", err)
+		}
+		log.Println("database migrations completed")
 	} else {
 		log.Println("DATABASE_URL not set, starting without database connection")
 	}
@@ -158,4 +166,20 @@ func fallback(value string, defaultValue string) string {
 	}
 
 	return value
+}
+
+func runMigrations(pool *pgxpool.Pool) error {
+	db := stdlib.OpenDBFromPool(pool)
+	defer db.Close()
+
+	goose.SetBaseFS(os.DirFS("migrations"))
+	if err := goose.SetDialect("postgres"); err != nil {
+		return err
+	}
+
+	if err := goose.Up(db, "."); err != nil {
+		return err
+	}
+
+	return nil
 }

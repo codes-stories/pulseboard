@@ -57,7 +57,12 @@ func (s *Service) SendRequest(ctx context.Context, req ProxyRequest) (*ProxyResp
 		return nil, ErrInvalidInput
 	}
 
-	if !s.config.AllowPrivate {
+	allowPrivate := s.config.AllowPrivate || req.AllowPrivate
+	if allowPrivate {
+		if cloudMetadataTarget(target) {
+			return nil, ErrUnsafeTarget
+		}
+	} else {
 		private, err := isPrivateTarget(target)
 		if err != nil || private {
 			return nil, ErrUnsafeTarget
@@ -168,6 +173,39 @@ func isPrivateTarget(rawURL string) (bool, error) {
 func isPrivateIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
 		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()
+}
+
+// cloudMetadataTarget reports whether the target resolves to a well-known cloud
+// metadata endpoint. These are always blocked, even when private targets are
+// explicitly permitted.
+func cloudMetadataTarget(rawURL string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+
+	host := strings.Trim(parsed.Hostname(), "[]")
+	if ip := net.ParseIP(host); ip != nil {
+		return isCloudMetadataIP(ip)
+	}
+
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return false
+	}
+	for _, ip := range ips {
+		if isCloudMetadataIP(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func isCloudMetadataIP(ip net.IP) bool {
+	return ip.Equal(net.ParseIP("169.254.169.254")) || // AWS / GCP / Azure
+		ip.Equal(net.ParseIP("169.254.170.2")) || // AWS ECS
+		ip.Equal(net.ParseIP("100.100.100.200")) || // Alibaba Cloud
+		ip.Equal(net.ParseIP("fd00:ec2::254")) // AWS ECS IPv6
 }
 
 // ---- AI payload generation ----

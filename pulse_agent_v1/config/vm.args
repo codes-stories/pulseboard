@@ -1,0 +1,45 @@
+## Pulse Agent VM Arguments
+## This file is used by the release script to configure the Erlang VM
+
+## Name of the node
+-name pulse_agent@127.0.0.1
+
+## Cookie for distributed Erlang
+-setcookie pulse_agent_cookie
+
+## Enable kernel polling (Linux only)
++kernel poll true
+
+## Enable SMP support
++smp auto
+
+## Set maximum number of processes
++P 1048576
+
+## Set maximum number of ETS tables
++e 1048576
+
+## Enable dirty CPU schedulers
++sdcpu auto
+
+## Enable dirty IO schedulers
++sdio auto
+
+## Disable CPU topology detection
++c false
+
+## Set maximum heap size for processes (in words)
++hms 50000000
+
+## Enable trace for garbage collection
++t gc
+
+## Logger configuration
+-lager handlers [lager_console_backend] crash_log
+-lager crash_log_size 10485760
+-lager crash_log_msg "{time} [{severity}] {module}:{line} - {message}\n"
+-lager crash_log_date "$D0"
+-lager crash_log_count 5
+
+## Enable error logger
+-error_logger lager

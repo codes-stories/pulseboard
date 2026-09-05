@@ -294,3 +294,97 @@ export function statusTone(status: number): string {
 export function shortURL(url: string): string {
   return url.replace(/^https?:\/\//, "");
 }
+
+// ---- Target classification ----
+
+export type TargetType = "local" | "private" | "metadata" | "public";
+
+export const targetLabel: Record<TargetType, string> = {
+  local: "Local",
+  private: "Private",
+  metadata: "Metadata",
+  public: "Public",
+};
+
+export const targetTone: Record<TargetType, string> = {
+  local: "bg-[rgba(217,119,6,0.12)] text-[#d97706]",
+  private: "bg-[rgba(234,88,12,0.12)] text-[#ea580c]",
+  metadata: "bg-[rgba(185,28,28,0.12)] text-[#b91c1c]",
+  public: "bg-[rgba(21,128,61,0.12)] text-[#15803d]",
+};
+
+export const targetHint: Record<TargetType, string> = {
+  local: "Local address (localhost or loopback) — e.g. an API running on this machine.",
+  private: "Private network address (RFC1918 / link-local). Only reachable through the PulseBoard proxy.",
+  metadata: "Cloud metadata endpoint. Blocked for security, even when local targets are allowed.",
+  public: "Public internet address.",
+};
+
+function parseIPv4(host: string): number[] | null {
+  const parts = host.split(".");
+  if (parts.length !== 4) return null;
+  const octets: number[] = [];
+  for (const part of parts) {
+    if (!/^\d{1,3}$/.test(part)) return null;
+    const value = Number(part);
+    if (value < 0 || value > 255) return null;
+    octets.push(value);
+  }
+  return octets;
+}
+
+function isCloudMetadataIPv4(octets: number[]): boolean {
+  const dotted = octets.join(".");
+  return dotted === "169.254.169.254" || dotted === "169.254.170.2" || dotted === "100.100.100.200";
+}
+
+function isLoopbackIPv4(octets: number[]): boolean {
+  return octets[0] === 127;
+}
+
+function isPrivateIPv4(octets: number[]): boolean {
+  const [a, b] = octets;
+  if (a === 10) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  if (a === 0) return true;
+  return false;
+}
+
+export function classifyTarget(url: string): TargetType {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname.replace(/^\[|\]$/g, "");
+  } catch {
+    return "public";
+  }
+
+  const lower = hostname.toLowerCase();
+  if (lower === "localhost" || lower.endsWith(".localhost") || lower.endsWith(".local")) return "local";
+
+  const octets = parseIPv4(hostname);
+  if (octets) {
+    if (isCloudMetadataIPv4(octets)) return "metadata";
+    if (isLoopbackIPv4(octets)) return "local";
+    if (isPrivateIPv4(octets)) return "private";
+    return "public";
+  }
+
+  if (hostname.includes(":")) {
+    if (hostname === "::1" || hostname === "::") return "local";
+    if (hostname.toLowerCase().startsWith("fd00:ec2")) return "metadata";
+    if (
+      hostname.toLowerCase().startsWith("fe80") ||
+      hostname.toLowerCase().startsWith("fc") ||
+      hostname.toLowerCase().startsWith("fd")
+    ) {
+      return "private";
+    }
+    return "public";
+  }
+
+  if (lower.endsWith(".internal")) return "private";
+  return "public";
+}

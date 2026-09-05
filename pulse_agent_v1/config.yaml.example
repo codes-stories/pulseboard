@@ -1,0 +1,232 @@
+# PulseBoard Agent Configuration
+# Copy to /etc/pulse-agent/config.yaml or ~/.config/pulse-agent/config.yaml
+
+# ──────────────────────────────────────────────────────────────────────────
+# Server Configuration
+# ──────────────────────────────────────────────────────────────────────────
+
+server:
+  # HTTP API port (health, agents, logs endpoints)
+  http_port: 8082
+
+  # OTLP ingestion port (traces, metrics, logs, profiles)
+  otlp_port: 8083
+
+  # Bind address (0.0.0.0 for all interfaces)
+  bind_address: "0.0.0.0"
+
+  # Request timeout in milliseconds
+  request_timeout_ms: 30000
+
+  # Maximum request body size in bytes (10MB)
+  max_body_size: 10485760
+
+# ──────────────────────────────────────────────────────────────────────────
+# Kafka Configuration
+# ──────────────────────────────────────────────────────────────────────────
+
+kafka:
+  # Enable/disable Kafka integration
+  enabled: true
+
+  # Kafka broker addresses (comma-separated)
+  brokers: ["localhost:9092"]
+
+  # Kafka topic for telemetry data
+  topic: "api-logs"
+
+  # Client ID for this agent instance
+  client_id: "pulse-agent-$(hostname)"
+
+  # Acknowledgment level: "all", "1", or "0"
+  acks: "all"
+
+  # Batch size in bytes
+  batch_size: 16384
+
+  # Linger time in milliseconds
+  linger_ms: 5
+
+  # Compression type: "none", "gzip", "snappy", "zstd"
+  compression: "snappy"
+
+  # Maximum time to wait for metadata refresh (ms)
+  metadata_max_age_ms: 300000
+
+  # Retry configuration
+  retries: 3
+  retry_backoff_ms: 1000
+
+  # Security (optional)
+  # security_protocol: "SASL_SSL"
+  # sasl_mechanism: "SCRAM-SHA-512"
+  # sasl_username: "username"
+  # sasl_password: "password"
+
+# ──────────────────────────────────────────────────────────────────────────
+# OpenTelemetry (OTLP) Configuration
+# ──────────────────────────────────────────────────────────────────────────
+
+otlp:
+  # Enable/disable OTLP ingestion
+  enabled: true
+
+  # HTTP port for OTLP ingestion
+  http_port: 8083
+
+  # Enable gRPC endpoint (requires additional setup)
+  grpc_enabled: false
+  grpc_port: 8084
+
+  # Maximum concurrent streams for gRPC
+  max_concurrent_streams: 100
+
+  # Payload limits
+  max_payload_size: 10485760  # 10MB
+
+  # Content types accepted
+  # - application/json
+  # - application/x-protobuf
+  # - application/json; charset=utf-8
+
+# ──────────────────────────────────────────────────────────────────────────
+# PostgreSQL Configuration (Optional)
+# ──────────────────────────────────────────────────────────────────────────
+
+postgres:
+  # Enable/disable PostgreSQL persistence
+  enabled: false
+
+  # Connection details
+  host: "localhost"
+  port: 5432
+  database: "pulse_agent_v1"
+  username: "pulse_agent"
+  password: ""
+
+  # Connection pool settings
+  pool_size: 10
+  max_overflow: 5
+  pool_timeout: 30000
+
+  # SSL mode: "disable", "require", "verify-ca", "verify-full"
+  ssl_mode: "disable"
+
+  # Connection timeout (ms)
+  connect_timeout: 10000
+
+# ──────────────────────────────────────────────────────────────────────────
+# Backend API Synchronization
+# ──────────────────────────────────────────────────────────────────────────
+
+backend:
+  # Base URL for backend API
+  api_url: "http://localhost:8080"
+
+  # Enable periodic log synchronization from backend
+  sync_enabled: false
+
+  # Sync interval in milliseconds
+  sync_interval_ms: 30000
+
+  # Batch size for sync operations
+  sync_batch_size: 100
+
+  # API key for authentication (optional)
+  api_key: ""
+
+  # Request timeout (ms)
+  timeout_ms: 30000
+
+  # Retry configuration
+  max_retries: 3
+  retry_backoff_ms: 5000
+
+# ──────────────────────────────────────────────────────────────────────────
+# Redis Configuration (Optional)
+# ──────────────────────────────────────────────────────────────────────────
+
+redis:
+  enabled: false
+  host: "localhost"
+  port: 6379
+  database: 0
+  password: ""
+  pool_size: 10
+  timeout_ms: 5000
+
+# ──────────────────────────────────────────────────────────────────────────
+# TLS/SSL Configuration (Production)
+# ──────────────────────────────────────────────────────────────────────────
+
+tls:
+  enabled: false
+  cert_file: "/etc/pulse-agent/certs/server.crt"
+  key_file: "/etc/pulse-agent/certs/server.key"
+  ca_file: "/etc/pulse-agent/certs/ca.crt"
+  verify_client: false
+  min_version: "1.2"
+
+# ──────────────────────────────────────────────────────────────────────────
+# Logging Configuration
+# ──────────────────────────────────────────────────────────────────────────
+
+logging:
+  level: "info"  # debug, info, warning, error
+  format: "json"  # json, text
+  output: "stdout"  # stdout, file, syslog
+  file_path: "/var/log/pulse-agent/agent.log"
+  max_size_mb: 100
+  max_files: 10
+  max_age_days: 30
+
+# ──────────────────────────────────────────────────────────────────────────
+# Metrics Configuration
+# ──────────────────────────────────────────────────────────────────────────
+
+metrics:
+  enabled: true
+  port: 9090
+  path: "/metrics"
+
+# ──────────────────────────────────────────────────────────────────────────
+# Service Discovery (Future)
+# ──────────────────────────────────────────────────────────────────────────
+
+service_discovery:
+  enabled: false
+  backends: ["static"]  # static, consul, kubernetes, dns
+  static_targets: []
+  kubernetes:
+    namespace: "default"
+    label_selector: "app.kubernetes.io/managed-by=opentelemetry"
+  consul:
+    address: "localhost:8500"
+  dns:
+    names: []
+  interval_ms: 60000
+
+# ──────────────────────────────────────────────────────────────────────────
+# Advanced Settings
+# ──────────────────────────────────────────────────────────────────────────
+
+advanced:
+  # Worker pool size for async processing
+  worker_pool_size: 4
+
+  # Channel buffer sizes
+  kafka_channel_buffer: 1000
+  otlp_channel_buffer: 1000
+
+  # Backpressure handling
+  max_memory_mb: 512
+  backpressure_threshold: 0.8
+
+  # Circuit breaker
+  circuit_breaker_enabled: true
+  failure_threshold: 5
+  recovery_timeout_ms: 30000
+
+  # Dead letter queue
+  dlq_enabled: true
+  dlq_max_size: 10000

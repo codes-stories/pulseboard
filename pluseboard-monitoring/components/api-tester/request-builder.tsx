@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Braces, Check, Copy, Eraser, Eye, EyeOff, Loader2, Plus, Send, Wand2, X } from "lucide-react";
 import type { AuthState, BodyState, BodyType, KVRow, RequestState } from "./workspace-types";
-import { COMMON_HEADERS, METHODS, SEND_SHORTCUT, emptyKV, methodText, prettyJSON } from "./helpers";
+import { COMMON_HEADERS, METHODS, SEND_SHORTCUT, emptyKV, methodText, prettyJSON, classifyTarget } from "./helpers";
 import { KeyValueTable } from "./key-value-table";
 import { CookieEditor } from "./cookie-editor";
 import { LineEditor } from "./line-editor";
@@ -53,6 +53,8 @@ export function RequestBuilder({
   const headerCount = activeCount(request.headers);
   const cookieCount = activeCount(request.cookies);
   const authActive = request.auth.type !== "none";
+  const targetType = useMemo(() => classifyTarget(request.url), [request.url]);
+  const isInternalTarget = targetType !== "public";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[color:var(--bg)]">
