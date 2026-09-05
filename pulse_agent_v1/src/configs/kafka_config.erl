@@ -1,12 +1,12 @@
 %%%-------------------------------------------------------------------
 %% @doc Kafka configuration and environment setup.
+%% Reads config from application environment (set by application_env_setup).
 %% @end
 %%%-------------------------------------------------------------------
 
 -module(kafka_config).
 
 -export([
-    start_link/0,
     brokers/0,
     client_id/0,
     topic/0,
@@ -18,21 +18,6 @@
     producer_config/0,
     ensure_defaults/0
 ]).
-
--record(state, {
-    enabled = false,
-    brokers = [],
-    client_id = <<"pulse_agent_v1">>,
-    topic = <<"api-logs">>,
-    acks = all,
-    batch_size = 16384,
-    linger_ms = 5,
-    compression = none
-}).
-
-%% @doc Start the Kafka configuration worker.
-start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %% @doc Get Kafka brokers list.
 brokers() ->

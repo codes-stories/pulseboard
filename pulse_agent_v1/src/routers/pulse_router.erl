@@ -21,5 +21,14 @@ routes() ->
         {"/api/v1/agents/heartbeat", pulse_api_handler, #{resource => heartbeat}},
 
         {"/agent/logs", pulse_api_handler, #{resource => logs}},
-        {"/api/v1/logs", pulse_api_handler, #{resource => logs}}
+        {"/api/v1/logs", pulse_api_handler, #{resource => logs}},
+
+        %%% OTLP endpoints for telemetry ingestion
+        {"/v1/traces", pulse_otlp_handler, #{resource => traces}},
+        {"/v1/metrics", pulse_otlp_handler, #{resource => metrics}},
+        {"/v1/logs", pulse_otlp_handler, #{resource => logs}},
+        {"/v1/profiles", pulse_otlp_handler, #{resource => profiles}},
+
+        %%% Prometheus Remote Write endpoint
+        {"/api/v1/write", pulse_prom_remote_write, #{resource => write}}
     ].

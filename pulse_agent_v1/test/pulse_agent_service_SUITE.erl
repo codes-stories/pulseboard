@@ -25,8 +25,6 @@ init_per_suite(Config) ->
     application:ensure_all_started(pulse_agent_v1),
     application:ensure_all_started(brod),
     application:ensure_all_started(lager),
-    %% Clean up any existing data
-    ets_config:register_agent(#{agent_id => <<"cleanup-test">>, name => <<"cleanup">>}),
     Config.
 
 end_per_suite(_Config) ->
@@ -54,24 +52,25 @@ health_test(Config) ->
     end.
 
 %% @doc Test agent registration.
-register_agent_test(Config) ->
+register_agent_test(_Config) ->
     AgentId = list_to_binary("test-agent-" ++ integer_to_list(erlang:unique_integer([positive]))),
-    Params = #{agent_id => AgentId, name => <<"Test Agent">>, version => <<"1.0.0">>, status => <<"active">>},
-    case pulse_agent_service:register_agent(Params) of
+    Params = #{<<"agent_id">> => AgentId, <<"name">> => <<"Test Agent">>, <<"version">> => <<"1.0.0">>, <<"status">> => <<"active">>},
+    Result = pulse_agent_service:register_agent(Params),
+    case Result of
         {ok, Agent} ->
             case maps:get(agent_id, Agent) of
-                AgentId -> {pass, "agent registered"};
-                _ -> {fail, "agent_id mismatch"}
+                AgentId -> {pass, agent_registered};
+                _ -> {fail, agent_id_mismatch}
             end;
         {error, Reason} ->
-            {fail, "register_agent failed: " ++ Reason}
+            {fail, {register_agent_failed, Reason}}
     end.
 
 %% @doc Test heartbeat.
-heartbeat_test(Config) ->
+heartbeat_test(_Config) ->
     AgentId = list_to_binary("hb-test-" ++ integer_to_list(erlang:unique_integer([positive]))),
-    _ = pulse_agent_service:register_agent(#{agent_id => AgentId, name => <<"HB Test">>}),
-    case pulse_agent_service:heartbeat(#{agent_id => AgentId, status => <<"active">>}) of
+    _ = pulse_agent_service:register_agent(#{<<"agent_id">> => AgentId, <<"name">> => <<"HB Test">>}),
+    case pulse_agent_service:heartbeat(#{<<"agent_id">> => AgentId, <<"status">> => <<"active">>}) of
         {ok, Agent} ->
             case maps:get(status, Agent) of
                 <<"active">> -> {pass, "heartbeat updated status"};
@@ -82,10 +81,10 @@ heartbeat_test(Config) ->
     end.
 
 %% @doc Test log appending.
-append_log_test(Config) ->
+append_log_test(_Config) ->
     AgentId = list_to_binary("log-test-" ++ integer_to_list(erlang:unique_integer([positive]))),
-    _ = pulse_agent_service:register_agent(#{agent_id => AgentId, name => <<"Log Test">>}),
-    LogParams = #{agent_id => AgentId, level => <<"info">>, message => <<"Test log message">>, context => <<"{}">>},
+    _ = pulse_agent_service:register_agent(#{<<"agent_id">> => AgentId, <<"name">> => <<"Log Test">>}),
+    LogParams = #{<<"agent_id">> => AgentId, <<"level">> => <<"info">>, <<"message">> => <<"Test log message">>, <<"context">> => <<"{}">>},
     case pulse_agent_service:append_log(LogParams) of
         {ok, Log} ->
             case maps:get(message, Log) of

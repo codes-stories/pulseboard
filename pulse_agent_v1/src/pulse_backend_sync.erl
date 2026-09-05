@@ -171,18 +171,21 @@ fetch_logs(State) ->
 
 %% @doc Build the logs API URL with cursor pagination.
 build_logs_url(State) ->
-    Base = binary_to_list(State#state.backend_url) ++ "/api/v1/logs",
+    Base = to_string(State#state.backend_url) ++ "/api/v1/logs",
     case State#state.last_cursor of
         undefined -> Base;
-        Cursor -> Base ++ "?cursor=" ++ binary_to_list(Cursor) ++ "&limit=" ++ integer_to_list(State#state.batch_size)
+        Cursor -> Base ++ "?cursor=" ++ to_string(Cursor) ++ "&limit=" ++ integer_to_list(State#state.batch_size)
     end.
+
+to_string(Bin) when is_binary(Bin) -> binary_to_list(Bin);
+to_string(Str) when is_list(Str) -> Str.
 
 %% @doc Build request headers.
 build_headers(State) ->
     BaseHeaders = [{"accept", "application/json"}],
     case State#state.api_key of
         undefined -> BaseHeaders;
-        Key -> [{"authorization", "Bearer " ++ binary_to_list(Key)} | BaseHeaders]
+        Key -> [{"authorization", "Bearer " ++ to_string(Key)} | BaseHeaders]
     end.
 
 %% @doc Parse JSON response from backend.
@@ -238,7 +241,7 @@ update_metrics(#metrics{sync_count = SC, logs_fetched = LF, logs_published = LP,
 %% @doc Handle sync errors with retry logic.
 handle_sync_error(State, StartTime, Reason) ->
     NewMetrics = update_metrics(State#state.metrics, error, 0, StartTime),
-    pulse_logger:error("Backend sync failed: ~p", [Reason], #{}),
+    lager:log(error, "Backend sync failed: ~p", [Reason]),
     {error, State#state{metrics = NewMetrics}}.
 
 %% @doc Cleanup on termination.

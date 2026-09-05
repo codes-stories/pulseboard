@@ -6,6 +6,8 @@
 
 -module(pulse_logger).
 
+-compile({no_auto_import, [error/3]}).
+
 -export([
     debug/2,
     debug/3,

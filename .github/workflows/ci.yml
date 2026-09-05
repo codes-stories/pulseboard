@@ -1,0 +1,251 @@
+# PulseBoard Complete CI Pipeline
+#
+# Enforced by this workflow:
+# - PRs must target main
+# - Go code must be formatted and tidy
+# - Erlang code must compile and pass tests
+# - Frontend must lint and build
+# - All tests must pass
+
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  ERLANG_VERSION: "26.2.5"
+  GO_VERSION: "1.26.3"
+  NODE_VERSION: "20"
+
+jobs:
+  # =========================================================================
+  # Go Backend Checks
+  # =========================================================================
+  backend-checks:
+    name: Backend Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Check Go formatting
+        run: test -z "$(gofmt -l .)"
+
+      - name: Check go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Build backend
+        run: go build -v ./...
+
+      - name: Test backend
+        run: go test -v ./...
+
+  # =========================================================================
+  # Erlang Agent Checks (EUnit + Common Test)
+  # =========================================================================
+  agent-checks:
+    name: Erlang Agent Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pulse_agent_v1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Erlang
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "26.2.5"
+          version-type: exact
+
+      - name: Install rebar3
+        run: |
+          wget https://s3.amazonaws.com/rebar3/rebar3
+          chmod +x rebar3
+          sudo mv rebar3 /usr/local/bin/
+
+      - name: Get dependencies
+        run: rebar3 get-deps
+
+      - name: Compile
+        run: rebar3 compile
+
+      - name: Run EUnit tests
+        run: rebar3 eunit
+
+      - name: Run Common Test
+        run: rebar3 ct --cover
+
+  # =========================================================================
+  # Frontend Checks
+  # =========================================================================
+  frontend-checks:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pluseboard-monitoring
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: pluseboard-monitoring/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+  # =========================================================================
+  # Integration Tests (Full Stack)
+  # =========================================================================
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [backend-checks, agent-checks, frontend-checks]
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: pulseboard
+          POSTGRES_USER: pulseboard
+          POSTGRES_PASSWORD: pulseboard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pulseboard"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
+      zookeeper:
+        image: confluentinc/cp-zookeeper:7.5.0
+        env:
+          ZOOKEEPER_CLIENT_PORT: 2181
+          ZOOKEEPER_TICK_TIME: 2000
+        ports:
+          - 2181:2181
+
+      kafka:
+        image: confluentinc/cp-kafka:7.5.0
+        env:
+          KAFKA_BROKER_ID: 1
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+        ports:
+          - 9092:9092
+        depends_on:
+          - zookeeper
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start services
+        run: docker compose -f docker-compose.prod.yml up -d postgres redis zookeeper kafka
+
+      - name: Wait for services
+        run: |
+          sleep 30
+          docker compose -f docker-compose.prod.yml ps
+
+      - name: Build and start backend
+        run: |
+          cd backend
+          go build -o api ./cmd/api
+          ./api &
+          sleep 10
+          curl -f http://localhost:8080/health
+
+      - name: Build and start agent
+        run: |
+          cd pulse_agent_v1
+          docker build -t pulse-agent-test .
+          docker run -d --name pulse-agent-test \
+            -e KAFKA_BROKERS=kafka:9092 \
+            -e KAFKA_ENABLED=false \
+            -e OTEL_ENABLED=false \
+            -p 8082:8082 \
+            -p 8083:8083 \
+            pulse-agent-test
+          sleep 10
+          curl -f http://localhost:8082/health
+
+      - name: Test API endpoints
+        run: |
+          curl -f http://localhost:8080/health
+          curl -f http://localhost:8082/health
+          curl -f http://localhost:8083/health
+          curl -f http://localhost:3000/
+
+      - name: Test agent API
+        run: |
+          # Register agent
+          curl -X POST http://localhost:8082/api/v1/agents/register \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "agent_id=test-agent&name=test&version=1.0.0"
+          
+          # Heartbeat
+          curl -X POST http://localhost:8082/api/v1/agents/heartbeat \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "agent_id=test-agent&status=active"
+          
+          # Log ingestion
+          curl -X POST http://localhost:8082/api/v1/logs \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "agent_id=test-agent&level=info&message=test"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose -f docker-compose.prod.yml down -v || true
+
+  # =========================================================================
+  # PR Validation (Branch naming, description)
+  # =========================================================================
+  pr-validation:
+    name: PR Validation
+    needs: [backend-checks, agent-checks, frontend-checks]
+    uses: ./.github/workflows/pr_scope_and_branch_rule.yml

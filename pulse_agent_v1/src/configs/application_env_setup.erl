@@ -15,7 +15,8 @@
     configure_postgres/0,
     configure_redis/0,
     configure_kafka/0,
-    configure_backend_sync/0
+    configure_backend_sync/0,
+    configure_otlp/0
 ]).
 
 %% @doc Apply the full default environment set.
@@ -32,6 +33,7 @@ ensure_defaults() ->
     configure_redis(),
     configure_kafka(),
     configure_backend_sync(),
+    configure_otlp(),
     ok.
 
 %% @doc Default the HTTP listener to the port used by the current setup.
@@ -79,6 +81,12 @@ configure_backend_sync() ->
     ensure_env(backend_sync_interval_ms, 30000),
     ensure_env(backend_sync_batch_size, 100),
     ensure_env(backend_api_key, "").
+
+%% @doc OTLP configuration for telemetry ingestion.
+configure_otlp() ->
+    ensure_env(otel_enabled, true),
+    ensure_env(otel_http_port, 8083),
+    ensure_env(otel_protobuf_enabled, false).
 
 ensure_env(Key, Default) ->
     case application:get_env(pulse_agent_v1, Key) of

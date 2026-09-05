@@ -1,0 +1,48 @@
+[Unit]
+Description=PulseBoard Agent - Telemetry Collector
+Documentation=https://docs.pulseboard.io
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pulse-agent
+Group=pulse-agent
+WorkingDirectory=/opt/pulse-agent
+ExecStart=/opt/pulse-agent/bin/pulse_agent_v1 foreground
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Environment
+Environment=HOME=/opt/pulse-agent
+Environment=KAFKA_BROKERS=kafka1:9092,kafka2:9092
+Environment=KAFKA_ENABLED=true
+Environment=KAFKA_TOPIC=api-logs
+Environment=OTEL_ENABLED=true
+Environment=OTEL_HTTP_PORT=8083
+Environment=BACKEND_API_URL=http://backend:8080
+Environment=BACKEND_SYNC_ENABLED=false
+Environment=POSTGRES_ENABLED=false
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/pulse-agent /var/log/pulse-agent
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pulse-agent
+
+[Install]
+WantedBy=multi-user.target

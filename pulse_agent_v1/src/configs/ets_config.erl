@@ -173,6 +173,9 @@ persist_result({error, disabled}, _Label) ->
     ok;
 persist_result({error, Reason}, Label) ->
     error_logger:warning_msg("PostgreSQL ~s write failed: ~p~n", [Label, Reason]),
+    ok;
+persist_result(Other, Label) ->
+    error_logger:warning_msg("PostgreSQL ~s write returned unexpected: ~p~n", [Label, Other]),
     ok.
 
 timestamp() ->

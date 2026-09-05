@@ -186,7 +186,7 @@ export function ApiWorkspace() {
         controllerRef.current = null;
       }
     },
-    [pushHistory, allowPrivate],
+    [pushHistory],
   );
 
   const send = useCallback(() => {
