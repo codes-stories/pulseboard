@@ -17,6 +17,7 @@ type Config struct {
 	InstallURL         string
 	DownloadBaseURL    string
 	Version            string
+	ErlangAgentURL     string
 }
 
 type Service struct {

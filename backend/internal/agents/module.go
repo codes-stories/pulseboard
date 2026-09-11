@@ -14,10 +14,11 @@ type RateLimiters struct {
 }
 
 type Module struct {
-	repository   *Repository
-	service      *Service
-	handler      *Handler
-	rateLimiters RateLimiters
+	repository    *Repository
+	service       *Service
+	handler       *Handler
+	logProxy      *LogProxyService
+	rateLimiters  RateLimiters
 }
 
 type ModuleOption func(*Module)
@@ -25,10 +26,12 @@ type ModuleOption func(*Module)
 func NewModule(db *pgxpool.Pool, config Config, opts ...ModuleOption) *Module {
 	repository := NewRepository(db)
 	service := NewService(repository, config)
+	logProxy := NewLogProxyService(config.ErlangAgentURL)
 	module := &Module{
 		repository: repository,
 		service:    service,
-		handler:    NewHandler(service),
+		handler:    NewHandler(service, logProxy),
+		logProxy:   logProxy,
 	}
 
 	for _, opt := range opts {

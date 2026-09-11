@@ -11,11 +11,12 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	service  *Service
+	logProxy *LogProxyService
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, logProxy *LogProxyService) *Handler {
+	return &Handler{service: service, logProxy: logProxy}
 }
 
 // ---- User-facing handlers ----
@@ -493,4 +494,60 @@ func writeServiceError(w http.ResponseWriter, err error) {
 	default:
 		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
+}
+
+// =========================================================================
+// Logs Proxy Handlers (proxied to Erlang agent)
+// =========================================================================
+
+// @Summary List logs from Erlang agent
+// @Tags Logs
+// @Description List logs from the Erlang agent
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} agents.LogsResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Failure 500 {object} agents.ErrorResponse
+// @Router /logs [get]
+func (h *Handler) ListLogsHandler(w http.ResponseWriter, r *http.Request) {
+	logs, err := h.logProxy.ListLogs(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "failed to fetch logs from agent")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "ok",
+		"logs":   logs,
+	})
+}
+
+// @Summary Append log to Erlang agent
+// @Tags Logs
+// @Description Append a log entry to the Erlang agent
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body agents.AppendLogRequest true "Log entry"
+// @Success 201 {object} agents.AppendLogResponse
+// @Failure 400 {object} agents.ErrorResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /logs [post]
+func (h *Handler) AppendLogHandler(w http.ResponseWriter, r *http.Request) {
+	var req AppendLogRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	log, err := h.logProxy.AppendLog(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "failed to append log to agent")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"status": "ok",
+		"action": "log",
+		"log":    log,
+	})
 }

@@ -31,6 +31,10 @@ func (m *Module) UserRoutes() http.Handler {
 		r.Post("/enrollment-token", m.handler.CreateEnrollmentToken)
 	})
 
+	// Logs proxy endpoints (proxied to Erlang agent)
+	r.Get("/logs", m.logProxy.ListLogsHandler)
+	r.Post("/logs", m.logProxy.AppendLogHandler)
+
 	return r
 }
 
