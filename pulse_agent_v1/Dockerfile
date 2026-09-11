@@ -48,6 +48,9 @@ RUN addgroup -g 1000 -S pulse && \
 
 WORKDIR /opt/pulse-agent
 
+# Create log directory
+RUN mkdir -p /opt/pulse-agent/log && chown pulse:pulse /opt/pulse-agent/log
+
 # Copy release from builder
 COPY --from=builder /app/_build/prod/rel/pulse_agent_v1 ./
 
