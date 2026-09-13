@@ -1,9 +1,11 @@
 import type {
   Agent,
+  AgentLog,
   APIKey,
   APIKeyCreated,
   APITest,
   AuthResponse,
+  CheckResult,
   CreateAgentRequest,
   EnrollmentToken,
   Installation,
@@ -200,6 +202,14 @@ export function rotateAPIKey(agentID: string, keyID: string): Promise<APIKeyCrea
   return request<APIKeyCreated>(`/agents/${encodeURIComponent(agentID)}/api-keys/${encodeURIComponent(keyID)}/rotate`, {
     method: "POST",
   });
+}
+
+export function listAgentLogs(agentID: string): Promise<{ logs: AgentLog[] }> {
+  return request<{ logs: AgentLog[] }>(`/agents/${encodeURIComponent(agentID)}/logs`);
+}
+
+export function listAgentCheckResults(agentID: string): Promise<{ results: CheckResult[] }> {
+  return request<{ results: CheckResult[] }>(`/agents/${encodeURIComponent(agentID)}/results`);
 }
 
 // ---- API Tester (public tools) ----

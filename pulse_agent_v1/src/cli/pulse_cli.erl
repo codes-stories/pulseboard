@@ -2,6 +2,10 @@
 
 -export([main/1]).
 
+main(["enroll", Token]) ->
+    pulse_enroll:run(Token);
+main(["enroll", "--token", Token]) ->
+    pulse_enroll:run(Token);
 main(["login", "--token", Token]) ->
     pulse_login:run(Token);
 main(["login", Token]) ->
@@ -38,8 +42,10 @@ usage() ->
         "\n"
         "Usage:\n"
         "\n"
-        "  pulse-agent login <TOKEN>\n"
+        "  pulse-agent enroll <ENROLLMENT_TOKEN>\n"
+        "  pulse-agent enroll --token <ENROLLMENT_TOKEN>\n"
         "\n"
+        "  pulse-agent login <TOKEN>\n"
         "  pulse-agent login --token <TOKEN>\n"
         "  pulse-agent login --api-key <API_KEY>\n"
         "\n"

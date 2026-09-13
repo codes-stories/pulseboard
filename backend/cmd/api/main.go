@@ -11,8 +11,8 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/pressly/goose/v3"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/gaurav/pulseboard/docs"
 	"github.com/gaurav/pulseboard/internal/agents"

@@ -397,6 +397,44 @@ func (s *Service) InstallationInfo() InstallationResponse {
 	}
 }
 
+func (s *Service) IngestAgentLog(ctx context.Context, agentID string, req AgentLogIngestRequest) (*AgentLog, error) {
+	if strings.TrimSpace(req.Message) == "" {
+		return nil, ErrInvalidInput
+	}
+
+	level := strings.TrimSpace(req.Level)
+	if level == "" {
+		level = "info"
+	}
+
+	log := &AgentLog{
+		ID:        newID(),
+		AgentID:   agentID,
+		Level:     level,
+		Message:   req.Message,
+		Context:   req.Context,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	if err := s.repository.InsertAgentLog(ctx, log); err != nil {
+		return nil, err
+	}
+
+	return log, nil
+}
+
+func (s *Service) ListAgentLogs(ctx context.Context, agentID string, limit int, cursor string) ([]AgentLog, error) {
+	return s.repository.ListAgentLogs(ctx, agentID, limit, cursor)
+}
+
+func (s *Service) ListCheckResults(ctx context.Context, monitorID string, limit int) ([]monitors.CheckResult, error) {
+	return s.repository.ListCheckResults(ctx, monitorID, limit)
+}
+
+func (s *Service) ListCheckResultsByAgent(ctx context.Context, agentID string, limit int) ([]monitors.CheckResult, error) {
+	return s.repository.ListCheckResultsByAgent(ctx, agentID, limit)
+}
+
 func toAgentResponse(agent *Agent) *AgentResponse {
 	return &AgentResponse{
 		ID:          agent.ID,

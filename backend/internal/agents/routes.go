@@ -29,6 +29,9 @@ func (m *Module) UserRoutes() http.Handler {
 		r.Post("/api-keys/{keyID}/rotate", m.handler.RotateAPIKey)
 
 		r.Post("/enrollment-token", m.handler.CreateEnrollmentToken)
+
+		r.Get("/logs", m.handler.ListAgentLogs)
+		r.Get("/results", m.handler.ListAgentCheckResults)
 	})
 
 	// Logs proxy endpoints (proxied to Erlang agent)
@@ -65,6 +68,11 @@ func (m *Module) AgentRoutes() http.Handler {
 		m.limit(m.rateLimiters.Result),
 		authmw.RequireAgent(m.Verifier()),
 	).Post("/check-results", m.handler.IngestCheckResult)
+
+	r.With(
+		m.limit(m.rateLimiters.Result),
+		authmw.RequireAgent(m.Verifier()),
+	).Post("/logs", m.handler.IngestAgentLog)
 
 	return r
 }

@@ -457,6 +457,135 @@ func (h *Handler) IngestCheckResult(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// @Summary Ingest an agent log
+// @Tags Agent API
+// @Description Submit a log entry from the agent to be stored in the backend.
+// @Security AgentAuth
+// @Accept json
+// @Produce json
+// @Param request body agents.AgentLogIngestRequest true "Log entry"
+// @Success 201 {object} agents.AgentLogResponse
+// @Failure 400 {object} agents.ErrorResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agent/logs [post]
+func (h *Handler) IngestAgentLog(w http.ResponseWriter, r *http.Request) {
+	agent, ok := authmw.AgentFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "invalid agent credentials")
+		return
+	}
+
+	var req AgentLogIngestRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	log, err := h.service.IngestAgentLog(r.Context(), agent.AgentID, req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, log)
+}
+
+// @Summary List agent logs
+// @Tags Agent API
+// @Description List logs for a specific agent.
+// @Security BearerAuth
+// @Produce json
+// @Param agentID path string true "Agent ID"
+// @Param limit query int false "Max results (default 100)"
+// @Param cursor query string false "Cursor for pagination"
+// @Success 200 {object} agents.AgentLogsResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agents/{agentID}/logs [get]
+func (h *Handler) ListAgentLogs(w http.ResponseWriter, r *http.Request) {
+	user, ok := authmw.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	agentID := chi.URLParam(r, "agentID")
+	if _, err := h.service.GetAgent(r.Context(), user.ID, agentID); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	limit := 100
+	cursor := r.URL.Query().Get("cursor")
+
+	logs, err := h.service.ListAgentLogs(r.Context(), agentID, limit, cursor)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	resp := make([]AgentLogResponse, 0, len(logs))
+	for _, l := range logs {
+		resp = append(resp, AgentLogResponse{
+			ID:        l.ID,
+			AgentID:   l.AgentID,
+			Level:     l.Level,
+			Message:   l.Message,
+			Context:   l.Context,
+			CreatedAt: l.CreatedAt,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, AgentLogsResponse{Logs: resp})
+}
+
+// @Summary List check results for an agent
+// @Tags Agent API
+// @Description List check results submitted by a specific agent.
+// @Security BearerAuth
+// @Produce json
+// @Param agentID path string true "Agent ID"
+// @Param limit query int false "Max results (default 100)"
+// @Success 200 {object} agents.CheckResultsResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agents/{agentID}/results [get]
+func (h *Handler) ListAgentCheckResults(w http.ResponseWriter, r *http.Request) {
+	user, ok := authmw.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	agentID := chi.URLParam(r, "agentID")
+	if _, err := h.service.GetAgent(r.Context(), user.ID, agentID); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	limit := 100
+	results, err := h.service.ListCheckResultsByAgent(r.Context(), agentID, limit)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	resp := make([]CheckResultResponse, 0, len(results))
+	for _, r := range results {
+		resp = append(resp, CheckResultResponse{
+			ID:           r.ID,
+			MonitorID:    r.MonitorID,
+			AgentID:      r.AgentID,
+			StatusCode:   r.StatusCode,
+			LatencyMS:    r.LatencyMS,
+			Success:      r.Success,
+			ErrorMessage: r.ErrorMessage,
+			CheckedAt:    r.CheckedAt,
+			CreatedAt:    r.CreatedAt,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, CheckResultsResponse{Results: resp})
+}
+
 // ---- helpers ----
 
 func decodeJSON(r *http.Request, dst any) error {

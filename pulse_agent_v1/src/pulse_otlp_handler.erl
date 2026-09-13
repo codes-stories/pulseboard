@@ -68,6 +68,7 @@ process_payload(Type, Payload, Req0) ->
         {ok, Normalized} ->
             case pulse_kafka_producer:produce_batch(Normalized) of
                 {ok, _Offsets} ->
+                    push_to_backend(Type, Normalized),
                     respond(Req0, 200, #{status => <<"ok">>, type => Type, count => length(Normalized)});
                 {error, Reason} ->
                     respond_error(Req0, 500, {kafka_error, Reason})
@@ -75,6 +76,15 @@ process_payload(Type, Payload, Req0) ->
         {error, Reason} ->
             respond_error(Req0, 400, {normalization_error, Reason})
     end.
+
+push_to_backend(logs, Normalized) ->
+    try
+        pulse_backend_log_pusher:push_logs(Normalized)
+    catch
+        _:_ -> ok
+    end;
+push_to_backend(_Type, _Normalized) ->
+    ok.
 
 respond(Req0, Status, Payload) ->
     Req1 = pulse_http:reply_json(Req0, Status, Payload),

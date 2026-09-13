@@ -14,11 +14,11 @@ type RateLimiters struct {
 }
 
 type Module struct {
-	repository    *Repository
-	service       *Service
-	handler       *Handler
-	logProxy      *LogProxyService
-	rateLimiters  RateLimiters
+	repository   *Repository
+	service      *Service
+	handler      *Handler
+	logProxy     *LogProxyService
+	rateLimiters RateLimiters
 }
 
 type ModuleOption func(*Module)

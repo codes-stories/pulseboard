@@ -89,6 +89,41 @@ required(Params, [Key1, Key2]) ->
             end;
         _ ->
             {error, missing_agent_id}
-    end;
+    end.
+
 get_value(Params, Key, Default) ->
     maps:get(Key, Params, Default).
+
+register_agent(_Params) ->
+    #{status => <<"ok">>, action => <<"register">>}.
+
+heartbeat(_Params) ->
+    #{status => <<"ok">>, action => <<"heartbeat">>}.
+
+append_log(Form) ->
+    Message = maps:get(<<"message">>, Form, <<>>),
+    AgentId = maps:get(<<"agent_id">>, Form, <<"unknown">>),
+    Level = maps:get(<<"level">>, Form, <<"info">>),
+    Id = erlang:unique_integer([positive]),
+    Timestamp = erlang:system_time(second),
+    Log = #{id => Id, agent_id => AgentId, level => Level, message => Message, timestamp => Timestamp},
+    Log.
+
+get_performance() ->
+    get_metrics().
+
+list_agents() ->
+    [].
+
+list_logs() ->
+    [].
+
+reason_text({kafka_error, _Reason}) -> <<"kafka error">>;
+reason_text({http_error, _Status, _Body}) -> <<"http error">>;
+reason_text({parse_error, _Reason}) -> <<"parse error">>;
+reason_text({request_error, _Reason}) -> <<"request error">>;
+reason_text({normalization_error, _Reason}) -> <<"normalization error">>;
+reason_text({invalid_json, _Reason}) -> <<"invalid json">>;
+reason_text(request_too_large) -> <<"request tooo large">>;
+reason_text({protobuf_not_implemented, Msg}) -> list_to_binary(Msg);
+reason_text(_) -> <<"unknown error">>.

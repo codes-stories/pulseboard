@@ -152,3 +152,28 @@ export interface SaveAPITestRequest {
   response_body?: string;
   response_time_ms?: number;
 }
+
+// ---- Agent Logs ----
+
+export interface AgentLog {
+  id: string;
+  agent_id: string;
+  level: string;
+  message: string;
+  context: Record<string, unknown>;
+  created_at: string;
+}
+
+// ---- Check Results ----
+
+export interface CheckResult {
+  id: string;
+  monitor_id: string;
+  agent_id: string;
+  status_code: number;
+  latency_ms: number;
+  success: boolean;
+  error_message: string;
+  checked_at: string;
+  created_at: string;
+}

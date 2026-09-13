@@ -476,6 +476,132 @@ func (r *Repository) EnrollAgent(ctx context.Context, params enrollParams) (*Age
 	return &agent, params.NewKey, nil
 }
 
+// ---- Agent logs ----
+
+func (r *Repository) InsertAgentLog(ctx context.Context, log *AgentLog) error {
+	if err := r.available(); err != nil {
+		return err
+	}
+
+	_, err := r.db.Exec(ctx, `
+		INSERT INTO agent_logs (id, agent_id, level, message, context, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, log.ID, log.AgentID, log.Level, log.Message, log.Context, log.CreatedAt)
+	return err
+}
+
+func (r *Repository) ListAgentLogs(ctx context.Context, agentID string, limit int, cursor string) ([]AgentLog, error) {
+	if err := r.available(); err != nil {
+		return nil, err
+	}
+
+	if limit <= 0 {
+		limit = 100
+	}
+
+	var rows pgx.Rows
+	var err error
+	if cursor != "" {
+		rows, err = r.db.Query(ctx, `
+			SELECT id, agent_id, level, message, context, created_at
+			FROM agent_logs
+			WHERE agent_id = $1 AND created_at < (SELECT created_at FROM agent_logs WHERE id = $2)
+			ORDER BY created_at DESC
+			LIMIT $3
+		`, agentID, cursor, limit)
+	} else {
+		rows, err = r.db.Query(ctx, `
+			SELECT id, agent_id, level, message, context, created_at
+			FROM agent_logs
+			WHERE agent_id = $1
+			ORDER BY created_at DESC
+			LIMIT $2
+		`, agentID, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	logs := make([]AgentLog, 0)
+	for rows.Next() {
+		var log AgentLog
+		if err := rows.Scan(&log.ID, &log.AgentID, &log.Level, &log.Message, &log.Context, &log.CreatedAt); err != nil {
+			return nil, err
+		}
+		logs = append(logs, log)
+	}
+	return logs, rows.Err()
+}
+
+// ---- Check results ----
+
+func (r *Repository) ListCheckResults(ctx context.Context, monitorID string, limit int) ([]monitors.CheckResult, error) {
+	if err := r.available(); err != nil {
+		return nil, err
+	}
+
+	if limit <= 0 {
+		limit = 100
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT id, monitor_id, agent_id, status_code, latency_ms, success, error_message, checked_at, created_at
+		FROM check_results
+		WHERE monitor_id = $1
+		ORDER BY checked_at DESC
+		LIMIT $2
+	`, monitorID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]monitors.CheckResult, 0)
+	for rows.Next() {
+		var result monitors.CheckResult
+		if err := rows.Scan(&result.ID, &result.MonitorID, &result.AgentID, &result.StatusCode,
+			&result.LatencyMS, &result.Success, &result.ErrorMessage, &result.CheckedAt, &result.CreatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, result)
+	}
+	return results, rows.Err()
+}
+
+func (r *Repository) ListCheckResultsByAgent(ctx context.Context, agentID string, limit int) ([]monitors.CheckResult, error) {
+	if err := r.available(); err != nil {
+		return nil, err
+	}
+
+	if limit <= 0 {
+		limit = 100
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT id, monitor_id, agent_id, status_code, latency_ms, success, error_message, checked_at, created_at
+		FROM check_results
+		WHERE agent_id = $1
+		ORDER BY checked_at DESC
+		LIMIT $2
+	`, agentID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]monitors.CheckResult, 0)
+	for rows.Next() {
+		var result monitors.CheckResult
+		if err := rows.Scan(&result.ID, &result.MonitorID, &result.AgentID, &result.StatusCode,
+			&result.LatencyMS, &result.Success, &result.ErrorMessage, &result.CheckedAt, &result.CreatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, result)
+	}
+	return results, rows.Err()
+}
+
 // ---- Agent-facing endpoints ----
 
 func (r *Repository) UpdateAgentHeartbeat(ctx context.Context, agentID string, req HeartbeatRequest) error {

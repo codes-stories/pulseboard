@@ -2,6 +2,15 @@ package agents
 
 import "time"
 
+type AgentLog struct {
+	ID        string                 `json:"id"`
+	AgentID   string                 `json:"agent_id"`
+	Level     string                 `json:"level"`
+	Message   string                 `json:"message"`
+	Context   map[string]interface{} `json:"context"`
+	CreatedAt time.Time              `json:"created_at"`
+}
+
 type AgentStatus string
 
 const (

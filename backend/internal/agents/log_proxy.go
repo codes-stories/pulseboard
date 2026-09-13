@@ -33,7 +33,7 @@ type LogEntry struct {
 }
 
 type LogsResponse struct {
-	Status string    `json:"status"`
+	Status string     `json:"status"`
 	Logs   []LogEntry `json:"logs"`
 }
 
@@ -45,8 +45,8 @@ type AppendLogRequest struct {
 }
 
 type AppendLogResponse struct {
-	Status string  `json:"status"`
-	Action string  `json:"action"`
+	Status string   `json:"status"`
+	Action string   `json:"action"`
 	Log    LogEntry `json:"log"`
 }
 

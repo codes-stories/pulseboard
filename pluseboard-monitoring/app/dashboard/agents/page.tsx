@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as api from "@/lib/api";
@@ -331,7 +332,12 @@ export default function AgentsPage() {
             {agents.map((agent) => (
               <div key={agent.id} className="grid gap-2 rounded-md border border-[color:var(--border)] px-4 py-4 md:grid-cols-[1.4fr_0.8fr_1fr_0.9fr_1fr_auto] md:items-center">
                 <div>
-                  <p className="font-medium">{agent.name}</p>
+                  <Link
+                    href={`/dashboard/agents/${agent.id}`}
+                    className="font-medium hover:text-[color:var(--primary)] transition-colors"
+                  >
+                    {agent.name}
+                  </Link>
                   <p className="font-mono text-xs text-[color:var(--muted)]">{agent.hostname || agent.device_id || agent.id.slice(0, 8)}</p>
                 </div>
                 <p className="text-sm text-[color:var(--muted)]">{agent.version || "—"}</p>
