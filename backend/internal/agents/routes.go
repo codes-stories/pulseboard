@@ -32,6 +32,7 @@ func (m *Module) UserRoutes() http.Handler {
 
 		r.Get("/logs", m.handler.ListAgentLogs)
 		r.Get("/results", m.handler.ListAgentCheckResults)
+		r.Get("/system-metrics", m.handler.ListSystemMetrics)
 	})
 
 	// Logs proxy endpoints (proxied to Erlang agent)
@@ -73,6 +74,11 @@ func (m *Module) AgentRoutes() http.Handler {
 		m.limit(m.rateLimiters.Result),
 		authmw.RequireAgent(m.Verifier()),
 	).Post("/logs", m.handler.IngestAgentLog)
+
+	r.With(
+		m.limit(m.rateLimiters.Result),
+		authmw.RequireAgent(m.Verifier()),
+	).Post("/system-metrics", m.handler.IngestSystemMetrics)
 
 	return r
 }

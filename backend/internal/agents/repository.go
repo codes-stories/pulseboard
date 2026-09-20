@@ -686,3 +686,49 @@ func (r *Repository) InsertCheckResult(ctx context.Context, result *monitors.Che
 		result.LatencyMS, result.Success, result.ErrorMessage, result.CheckedAt, result.CreatedAt)
 	return err
 }
+
+// ---- System metrics ----
+
+func (r *Repository) InsertSystemMetrics(ctx context.Context, id, agentID string, metricsData map[string]interface{}, collectedAt, createdAt time.Time) error {
+	if err := r.available(); err != nil {
+		return err
+	}
+
+	_, err := r.db.Exec(ctx, `
+		INSERT INTO system_metrics (id, agent_id, metrics, collected_at, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`, id, agentID, metricsData, collectedAt, createdAt)
+	return err
+}
+
+func (r *Repository) ListSystemMetrics(ctx context.Context, agentID string, limit int) ([]SystemMetricsResponse, error) {
+	if err := r.available(); err != nil {
+		return nil, err
+	}
+
+	if limit <= 0 {
+		limit = 100
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT id, agent_id, metrics, collected_at, created_at
+		FROM system_metrics
+		WHERE agent_id = $1
+		ORDER BY collected_at DESC
+		LIMIT $2
+	`, agentID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	metrics := make([]SystemMetricsResponse, 0)
+	for rows.Next() {
+		var m SystemMetricsResponse
+		if err := rows.Scan(&m.ID, &m.AgentID, &m.Metrics, &m.CollectedAt, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		metrics = append(metrics, m)
+	}
+	return metrics, rows.Err()
+}

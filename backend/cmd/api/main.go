@@ -21,6 +21,7 @@ import (
 	authmw "github.com/gaurav/pulseboard/internal/auth/middleware"
 	"github.com/gaurav/pulseboard/internal/config"
 	database "github.com/gaurav/pulseboard/internal/databases"
+	"github.com/gaurav/pulseboard/internal/metrics"
 	"github.com/gaurav/pulseboard/internal/users"
 )
 
@@ -135,6 +136,13 @@ func routes(pool *pgxpool.Pool, cfg *config.Config) http.Handler {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok go lang"}`))
 	})
+
+	metricsCollector := metrics.NewCollector(pool)
+	metricsHub := metrics.NewHub()
+	metricsHandler := metrics.NewHandler(metricsCollector, metricsHub)
+
+	r.Get("/api/v1/backend/metrics", metricsHandler.GetMetrics)
+	r.Get("/api/v1/agents/{agentID}/metrics/stream", metricsHandler.StreamMetrics)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

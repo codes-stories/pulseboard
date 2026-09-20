@@ -2,9 +2,18 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Clock, Globe, Server, Activity, FileText } from "lucide-react";
+import { ArrowLeft, Clock, Globe, Server, Activity, FileText, BarChart3 } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import * as api from "@/lib/api";
-import type { Agent } from "@/lib/types";
+import type { Agent, SystemMetric } from "@/lib/types";
 import { GlassCard } from "@/components/pulseboard-ui";
 
 function relativeTime(value?: string): string {
@@ -16,6 +25,20 @@ function relativeTime(value?: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+}
+
+function formatUptime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 function StatusChip({ status }: Readonly<{ status: Agent["status"] }>) {
@@ -85,6 +108,143 @@ function AgentOverview({ agent }: Readonly<{ agent: Agent }>) {
           <p className="mt-1 text-lg font-semibold">{new Date(agent.created_at).toLocaleDateString()}</p>
         </div>
       </div>
+    </GlassCard>
+  );
+}
+
+function MetricsPanel({ agentID }: Readonly<{ agentID: string }>) {
+  const metricsQuery = useQuery({
+    queryKey: ["agent-system-metrics", agentID],
+    queryFn: () => api.listAgentSystemMetrics(agentID),
+    refetchInterval: 5000,
+  });
+
+  const rawMetrics = metricsQuery.data?.metrics ?? [];
+  const metrics = [...rawMetrics].reverse();
+
+  const chartData = metrics.map((m) => ({
+    time: new Date(m.collected_at).toLocaleTimeString(),
+    goroutines: m.metrics.go_routines,
+    heapMB: +(m.metrics.heap_alloc_bytes / 1024 / 1024).toFixed(1),
+    heapObjects: m.metrics.heap_objects,
+    gcCycles: m.metrics.gc_cycles,
+    dbConns: m.metrics.db_pool?.acquired_conns ?? 0,
+    dbIdle: m.metrics.db_pool?.idle_conns ?? 0,
+  }));
+
+  const latest = rawMetrics[0]?.metrics;
+
+  return (
+    <GlassCard>
+      <div className="flex items-center gap-2 mb-4">
+        <BarChart3 className="h-5 w-5 text-[color:var(--muted)]" />
+        <h2 className="text-lg font-semibold">Backend Metrics</h2>
+        {latest && (
+          <span className="ml-auto text-xs text-[color:var(--muted)]">
+            Uptime: {formatUptime(latest.uptime_seconds)} | CPUs: {latest.num_cpu}
+          </span>
+        )}
+      </div>
+
+      {metricsQuery.isLoading ? (
+        <div className="skeleton h-48 rounded-md" />
+      ) : metricsQuery.isError ? (
+        <p className="text-sm text-[color:var(--danger)]">Failed to load metrics</p>
+      ) : !latest ? (
+        <p className="rounded-md border border-[color:var(--border)] px-4 py-8 text-center text-sm text-[color:var(--muted)]">
+          No metrics yet. The agent will start scraping backend metrics automatically after enrollment.
+        </p>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="rounded-md border border-[color:var(--border)] p-3">
+              <p className="text-xs text-[color:var(--muted)]">Goroutines</p>
+              <p className="mt-1 text-lg font-semibold">{latest.go_routines}</p>
+            </div>
+            <div className="rounded-md border border-[color:var(--border)] p-3">
+              <p className="text-xs text-[color:var(--muted)]">Heap</p>
+              <p className="mt-1 text-lg font-semibold">{formatBytes(latest.heap_alloc_bytes)}</p>
+            </div>
+            <div className="rounded-md border border-[color:var(--border)] p-3">
+              <p className="text-xs text-[color:var(--muted)]">GC Cycles</p>
+              <p className="mt-1 text-lg font-semibold">{latest.gc_cycles}</p>
+            </div>
+            <div className="rounded-md border border-[color:var(--border)] p-3">
+              <p className="text-xs text-[color:var(--muted)]">DB Conns</p>
+              <p className="mt-1 text-lg font-semibold">
+                {latest.db_pool ? `${latest.db_pool.acquired_conns}/${latest.db_pool.max_conns}` : "N/A"}
+              </p>
+            </div>
+          </div>
+
+          {chartData.length > 1 && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-[color:var(--muted)] mb-2">Goroutines</p>
+                <ResponsiveContainer width="100%" height={140}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="time" tick={{ fontSize: 10 }} stroke="var(--muted)" />
+                    <YAxis tick={{ fontSize: 10 }} stroke="var(--muted)" />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Line type="monotone" dataKey="goroutines" stroke="var(--primary)" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div>
+                <p className="text-xs text-[color:var(--muted)] mb-2">Heap Memory (MB)</p>
+                <ResponsiveContainer width="100%" height={140}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="time" tick={{ fontSize: 10 }} stroke="var(--muted)" />
+                    <YAxis tick={{ fontSize: 10 }} stroke="var(--muted)" />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Line type="monotone" dataKey="heapMB" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {latest.db_pool && (
+                <div>
+                  <p className="text-xs text-[color:var(--muted)] mb-2">DB Connections</p>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="time" tick={{ fontSize: 10 }} stroke="var(--muted)" />
+                      <YAxis tick={{ fontSize: 10 }} stroke="var(--muted)" />
+                      <Tooltip
+                        contentStyle={{
+                          background: "var(--card)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Line type="monotone" dataKey="dbConns" stroke="#10b981" strokeWidth={2} dot={false} name="Acquired" />
+                      <Line type="monotone" dataKey="dbIdle" stroke="#6b7280" strokeWidth={2} dot={false} name="Idle" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </GlassCard>
   );
 }
@@ -251,6 +411,8 @@ export default function AgentDetailPage() {
       </button>
 
       <AgentOverview agent={agent} />
+
+      <MetricsPanel agentID={agentID} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <LogsPanel agentID={agentID} />

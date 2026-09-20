@@ -435,6 +435,24 @@ func (s *Service) ListCheckResultsByAgent(ctx context.Context, agentID string, l
 	return s.repository.ListCheckResultsByAgent(ctx, agentID, limit)
 }
 
+func (s *Service) IngestSystemMetrics(ctx context.Context, agentID string, req SystemMetricsIngestRequest) error {
+	if req.Metrics == nil {
+		return ErrInvalidInput
+	}
+
+	now := time.Now().UTC()
+	collectedAt := req.CollectedAt
+	if collectedAt.IsZero() {
+		collectedAt = now
+	}
+
+	return s.repository.InsertSystemMetrics(ctx, newID(), agentID, req.Metrics, collectedAt, now)
+}
+
+func (s *Service) ListSystemMetrics(ctx context.Context, agentID string, limit int) ([]SystemMetricsResponse, error) {
+	return s.repository.ListSystemMetrics(ctx, agentID, limit)
+}
+
 func toAgentResponse(agent *Agent) *AgentResponse {
 	return &AgentResponse{
 		ID:          agent.ID,

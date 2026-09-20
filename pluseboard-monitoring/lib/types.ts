@@ -177,3 +177,31 @@ export interface CheckResult {
   checked_at: string;
   created_at: string;
 }
+
+// ---- System Metrics ----
+
+export interface SystemMetric {
+  id: string;
+  agent_id: string;
+  metrics: {
+    go_routines: number;
+    memory_alloc_bytes: number;
+    memory_sys_bytes: number;
+    heap_alloc_bytes: number;
+    heap_sys_bytes: number;
+    heap_objects: number;
+    gc_cycles: number;
+    gc_pause_total_ns: number;
+    num_cpu: number;
+    uptime_seconds: number;
+    db_pool?: {
+      total_conns: number;
+      idle_conns: number;
+      acquired_conns: number;
+      max_conns: number;
+    };
+    collected_at: string;
+  };
+  collected_at: string;
+  created_at: string;
+}

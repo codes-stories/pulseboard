@@ -153,3 +153,20 @@ type CheckResultsResponse struct {
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
+
+type SystemMetricsIngestRequest struct {
+	Metrics     map[string]interface{} `json:"metrics"`
+	CollectedAt time.Time              `json:"collected_at"`
+}
+
+type SystemMetricsResponse struct {
+	ID          string                 `json:"id"`
+	AgentID     string                 `json:"agent_id"`
+	Metrics     map[string]interface{} `json:"metrics"`
+	CollectedAt time.Time              `json:"collected_at"`
+	CreatedAt   time.Time              `json:"created_at"`
+}
+
+type SystemMetricsListResponse struct {
+	Metrics []SystemMetricsResponse `json:"metrics"`
+}

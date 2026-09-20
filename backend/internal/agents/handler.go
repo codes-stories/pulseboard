@@ -586,6 +586,71 @@ func (h *Handler) ListAgentCheckResults(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, CheckResultsResponse{Results: resp})
 }
 
+// @Summary Ingest system metrics from agent
+// @Tags Agent API
+// @Description Submit system metrics (scraped from Go backend) to be stored.
+// @Security AgentAuth
+// @Accept json
+// @Produce json
+// @Param request body agents.SystemMetricsIngestRequest true "System metrics"
+// @Success 204
+// @Failure 400 {object} agents.ErrorResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agent/system-metrics [post]
+func (h *Handler) IngestSystemMetrics(w http.ResponseWriter, r *http.Request) {
+	agent, ok := authmw.AgentFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "invalid agent credentials")
+		return
+	}
+
+	var req SystemMetricsIngestRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.service.IngestSystemMetrics(r.Context(), agent.AgentID, req); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// @Summary List system metrics for an agent
+// @Tags Agents
+// @Description List system metrics collected for a specific agent.
+// @Security BearerAuth
+// @Produce json
+// @Param agentID path string true "Agent ID"
+// @Param limit query int false "Max results (default 100)"
+// @Success 200 {object} agents.SystemMetricsListResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agents/{agentID}/system-metrics [get]
+func (h *Handler) ListSystemMetrics(w http.ResponseWriter, r *http.Request) {
+	user, ok := authmw.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	agentID := chi.URLParam(r, "agentID")
+	if _, err := h.service.GetAgent(r.Context(), user.ID, agentID); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	limit := 100
+	metrics, err := h.service.ListSystemMetrics(r.Context(), agentID, limit)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, SystemMetricsListResponse{Metrics: metrics})
+}
+
 // ---- helpers ----
 
 func decodeJSON(r *http.Request, dst any) error {
