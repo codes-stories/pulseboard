@@ -64,6 +64,60 @@ kafka:
   # sasl_password: "password"
 
 # ──────────────────────────────────────────────────────────────────────────
+# Monitoring Configuration
+# ──────────────────────────────────────────────────────────────────────────
+
+monitoring:
+  # Enable/disable monitoring endpoints
+  enabled: true
+
+  # API monitoring interval in seconds
+  api_monitor_interval: 30
+
+  # Performance metrics collection
+  performance:
+    enabled: true
+    cpu_threshold: 80  # percentage
+    memory_threshold: 80  # percentage
+
+  # Storage metrics
+  storage:
+    enabled: true
+    ets_retention_seconds: 3600
+
+  # Remote access
+  remote:
+    enabled: false
+    port: 8081
+
+# ──────────────────────────────────────────────────────────────────────────
+# Health Check Configuration
+# ──────────────────────────────────────────────────────────────────────────
+
+health:
+  # Health check endpoint configuration
+  endpoint: "/health"
+  verbose: true
+
+  # Checks included in health check
+  checks:
+    - name: "api"
+      type: "http"
+      url: "http://localhost:8082/health"
+    - name: "otlp"
+      type: "http"
+      url: "http://localhost:8083/health"
+    - name: "postgres"
+      enabled: false
+      type: "postgres"
+    - name: "kafka"
+      enabled: false
+      type: "kafka"
+    - name: "redis"
+      enabled: false
+      type: "redis"
+
+# ──────────────────────────────────────────────────────────────────────────
 # OpenTelemetry (OTLP) Configuration
 # ──────────────────────────────────────────────────────────────────────────
 
@@ -92,6 +146,28 @@ otlp:
 # ──────────────────────────────────────────────────────────────────────────
 # PostgreSQL Configuration (Optional)
 # ──────────────────────────────────────────────────────────────────────────
+
+postgres:
+  # Enable/disable PostgreSQL persistence
+  enabled: false
+
+  # Connection details
+  host: "localhost"
+  port: 5432
+  database: "pulse_agent_v1"
+  username: "pulse_agent"
+  password: ""
+
+  # Connection pool settings
+  pool_size: 10
+  max_overflow: 5
+  pool_timeout: 30000
+
+  # SSL mode: "disable", "require", "verify-ca", "verify-full"
+  ssl_mode: "disable"
+
+  # Connection timeout (ms)
+  connect_timeout: 10000
 
 postgres:
   # Enable/disable PostgreSQL persistence

@@ -152,3 +152,56 @@ export interface SaveAPITestRequest {
   response_body?: string;
   response_time_ms?: number;
 }
+
+// ---- Agent Logs ----
+
+export interface AgentLog {
+  id: string;
+  agent_id: string;
+  level: string;
+  message: string;
+  context: Record<string, unknown>;
+  created_at: string;
+}
+
+// ---- Check Results ----
+
+export interface CheckResult {
+  id: string;
+  monitor_id: string;
+  agent_id: string;
+  status_code: number;
+  latency_ms: number;
+  success: boolean;
+  error_message: string;
+  checked_at: string;
+  created_at: string;
+}
+
+// ---- System Metrics ----
+
+export interface SystemMetric {
+  id: string;
+  agent_id: string;
+  metrics: {
+    go_routines: number;
+    memory_alloc_bytes: number;
+    memory_sys_bytes: number;
+    heap_alloc_bytes: number;
+    heap_sys_bytes: number;
+    heap_objects: number;
+    gc_cycles: number;
+    gc_pause_total_ns: number;
+    num_cpu: number;
+    uptime_seconds: number;
+    db_pool?: {
+      total_conns: number;
+      idle_conns: number;
+      acquired_conns: number;
+      max_conns: number;
+    };
+    collected_at: string;
+  };
+  collected_at: string;
+  created_at: string;
+}

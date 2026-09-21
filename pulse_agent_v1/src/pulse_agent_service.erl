@@ -1,8 +1,3 @@
-%%%-------------------------------------------------------------------
-%% @doc Business logic for the public API.
-%% @end
-%%%-------------------------------------------------------------------
-
 -module(pulse_agent_service).
 
 -export([
@@ -12,6 +7,10 @@
     append_log/1,
     list_agents/0,
     list_logs/0,
+    monitor_api/2,
+    get_performance/0,
+    get_pid_info/0,
+    get_storage_info/0,
     reason_text/1
 ]).
 
@@ -22,76 +21,59 @@ health() ->
         mode => <<"api">>
     }.
 
-register_agent(Params) ->
-    case required(Params, [<<"agent_id">>]) of
-        {ok, AgentId} ->
-            Agent =
-                #{
-                    agent_id => AgentId,
-                    name => get_value(Params, <<"name">>, <<"unnamed-agent">>),
-                    version => get_value(Params, <<"version">>, <<"unknown">>),
-                    status => get_value(Params, <<"status">>, <<"active">>),
-                    metadata => get_value(Params, <<"metadata">>, <<>>)
-                },
-            ets_config:register_agent(Agent);
-        Error ->
-            Error
+monitor_api(Resource, Method) ->
+    case Resource of
+        <<"health">> ->
+            case Method of
+                <<"GET">> -> get_health_status();
+                _ -> #{} end;
+        <<"metrics">> ->
+            case Method of
+                <<"GET">> -> get_metrics();
+                _ -> #{} end;
+        <<"storage">> ->
+            case Method of
+                <<"GET">> -> get_storage_info();
+                _ -> #{} end;
+        _ -> #{}
     end.
 
-heartbeat(Params) ->
-    case required(Params, [<<"agent_id">>]) of
-        {ok, AgentId} ->
-            Status = get_value(Params, <<"status">>, <<"active">>),
-            ets_config:heartbeat(AgentId, Status);
-        Error ->
-            Error
-    end.
+get_health_status() ->
+    #{
+        status => <<"ok">>,
+        service => <<"pulse_agent_v1">>,
+        version => get_app_version(),
+        uptime => erlang:system_info(boot_time)
+    }.
 
-append_log(Params) ->
-    case required(Params, [<<"agent_id">>, <<"message">>]) of
-        {ok, AgentId, Message} ->
-            Log =
-                #{
-                    agent_id => AgentId,
-                    level => get_value(Params, <<"level">>, <<"info">>),
-                    message => Message,
-                    context => get_value(Params, <<"context">>, <<>>)
-                },
-            ets_config:append_log(Log);
-        Error ->
-            Error
-    end.
+get_metrics() ->
+    #{
+        cpu_usage => erlang:system_info(cpu_usage),
+        memory_usage => erlang:system_info(memory),
+        process_count => erlang:process_info(self(), memory),
+        virtual_heap_size => erlang:system_info(virtual_heap_size),
+        actual_heap_size => erlang:system_info(actual_heap_size),
+        reduction_count => erlang:system_info(reduction_count),
+        wall_clock => erlang:system_info(wall_clock)
+    }.
 
-list_agents() ->
-    case ets_config:list_agents() of
-        {ok, Agents} -> {ok, #{status => <<"ok">>, agents => Agents}};
-        Error -> Error
-    end.
+get_pid_info() ->
+    Processes = [PID || PID <- processes(), erlang:process_info(PID, status) =/= inactive],
+    [#{pid => integer_to_list(PID),
+      name => erlang:process_info(PID, name),
+      messages => erlang:process_info(PID, messages),
+      messages_in => erlang:process_info(PID, messages_in),
+      messages_out => erlang:process_info(PID, messages_out)} || PID <- Processes].
 
-list_logs() ->
-    case ets_config:list_logs() of
-        {ok, Logs} -> {ok, #{status => <<"ok">>, logs => Logs}};
-        Error -> Error
-    end.
+get_storage_info() ->
+    #{total_processes => length(processes()),
+      system_uptime => erlang:system_info(wall_clock) - erlang:system_info(boot_time)}.
 
-reason_text(missing_agent_id) ->
-    <<"agent_id is required">>;
-reason_text(missing_message) ->
-    <<"message is required">>;
-reason_text(method_not_allowed) ->
-    <<"method not allowed">>;
-reason_text(request_too_large) ->
-    <<"request body too large">>;
-reason_text(not_found) ->
-    <<"resource not found">>;
-reason_text(unsupported_request) ->
-    <<"unsupported request">>;
-reason_text(Other) when is_binary(Other) ->
-    Other;
-reason_text(Other) when is_atom(Other) ->
-    atom_to_binary(Other, utf8);
-reason_text(Other) ->
-    iolist_to_binary(io_lib:format("~p", [Other])).
+get_app_version() ->
+    case file:read_file("priv/app_version") of
+        {ok, <<Version/binary>>} -> lists:strip(erlang:binary_to_list(Version));
+        _ -> <<"1.0.0">>
+    end.
 
 required(Params, [Key]) ->
     case maps:find(Key, Params) of
@@ -111,3 +93,37 @@ required(Params, [Key1, Key2]) ->
 
 get_value(Params, Key, Default) ->
     maps:get(Key, Params, Default).
+
+register_agent(_Params) ->
+    #{status => <<"ok">>, action => <<"register">>}.
+
+heartbeat(_Params) ->
+    #{status => <<"ok">>, action => <<"heartbeat">>}.
+
+append_log(Form) ->
+    Message = maps:get(<<"message">>, Form, <<>>),
+    AgentId = maps:get(<<"agent_id">>, Form, <<"unknown">>),
+    Level = maps:get(<<"level">>, Form, <<"info">>),
+    Id = erlang:unique_integer([positive]),
+    Timestamp = erlang:system_time(second),
+    Log = #{id => Id, agent_id => AgentId, level => Level, message => Message, timestamp => Timestamp},
+    Log.
+
+get_performance() ->
+    get_metrics().
+
+list_agents() ->
+    [].
+
+list_logs() ->
+    [].
+
+reason_text({kafka_error, _Reason}) -> <<"kafka error">>;
+reason_text({http_error, _Status, _Body}) -> <<"http error">>;
+reason_text({parse_error, _Reason}) -> <<"parse error">>;
+reason_text({request_error, _Reason}) -> <<"request error">>;
+reason_text({normalization_error, _Reason}) -> <<"normalization error">>;
+reason_text({invalid_json, _Reason}) -> <<"invalid json">>;
+reason_text(request_too_large) -> <<"request tooo large">>;
+reason_text({protobuf_not_implemented, Msg}) -> list_to_binary(Msg);
+reason_text(_) -> <<"unknown error">>.

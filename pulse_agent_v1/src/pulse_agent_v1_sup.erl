@@ -51,6 +51,15 @@ init([]) ->
             type => worker
         },
         #{
+            %% Backend metrics scraper: periodically scrapes Go backend /metrics
+            %% and reports system metrics back to the backend.
+            id => backend_metrics_scraper,
+            start => {pulse_backend_metrics_scraper, start_link, []},
+            restart => transient,
+            shutdown => 5000,
+            type => worker
+        },
+        #{
             %% The HTTP server is isolated behind its own worker so the routing
             %% layer can evolve independently of the bootstrap logic.
             id => http_server,

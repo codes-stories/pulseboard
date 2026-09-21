@@ -1,9 +1,11 @@
 import type {
   Agent,
+  AgentLog,
   APIKey,
   APIKeyCreated,
   APITest,
   AuthResponse,
+  CheckResult,
   CreateAgentRequest,
   EnrollmentToken,
   Installation,
@@ -14,6 +16,7 @@ import type {
   ProxyResponse,
   RefreshResponse,
   SaveAPITestRequest,
+  SystemMetric,
   UpdateProfileRequest,
   User,
 } from "./types";
@@ -200,6 +203,18 @@ export function rotateAPIKey(agentID: string, keyID: string): Promise<APIKeyCrea
   return request<APIKeyCreated>(`/agents/${encodeURIComponent(agentID)}/api-keys/${encodeURIComponent(keyID)}/rotate`, {
     method: "POST",
   });
+}
+
+export function listAgentLogs(agentID: string): Promise<{ logs: AgentLog[] }> {
+  return request<{ logs: AgentLog[] }>(`/agents/${encodeURIComponent(agentID)}/logs`);
+}
+
+export function listAgentCheckResults(agentID: string): Promise<{ results: CheckResult[] }> {
+  return request<{ results: CheckResult[] }>(`/agents/${encodeURIComponent(agentID)}/results`);
+}
+
+export function listAgentSystemMetrics(agentID: string): Promise<{ metrics: SystemMetric[] }> {
+  return request<{ metrics: SystemMetric[] }>(`/agents/${encodeURIComponent(agentID)}/system-metrics`);
 }
 
 // ---- API Tester (public tools) ----

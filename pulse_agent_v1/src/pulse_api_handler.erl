@@ -63,6 +63,12 @@ dispatch(logs, <<"POST">>, Req0) ->
             end
         end
     );
+dispatch(monitor, <<"GET">>, Req0) ->
+    {Resource, Method} = cowboy_req:path(Req0),
+    case pulse_agent_service:monitor_api(Resource, Method) of
+        {ok, Payload} -> respond(Req0, 200, Payload);
+        {error, Reason} -> respond_error(Req0, 400, Reason)
+    end;
 dispatch(_Resource, _Method, Req0) ->
     respond_error(Req0, 405, method_not_allowed).
 

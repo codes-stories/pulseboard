@@ -48,6 +48,9 @@ RUN addgroup -g 1000 -S pulse && \
 
 WORKDIR /opt/pulse-agent
 
+# Create log directory
+RUN mkdir -p /opt/pulse-agent/log && chown pulse:pulse /opt/pulse-agent/log
+
 # Copy release from builder
 COPY --from=builder /app/_build/prod/rel/pulse_agent_v1 ./
 
@@ -66,7 +69,7 @@ EXPOSE 8082 8083
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8082/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8082/health || exit 1
 
 # Default command
 ENTRYPOINT ["/entrypoint.sh"]

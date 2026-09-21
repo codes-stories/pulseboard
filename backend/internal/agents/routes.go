@@ -29,7 +29,15 @@ func (m *Module) UserRoutes() http.Handler {
 		r.Post("/api-keys/{keyID}/rotate", m.handler.RotateAPIKey)
 
 		r.Post("/enrollment-token", m.handler.CreateEnrollmentToken)
+
+		r.Get("/logs", m.handler.ListAgentLogs)
+		r.Get("/results", m.handler.ListAgentCheckResults)
+		r.Get("/system-metrics", m.handler.ListSystemMetrics)
 	})
+
+	// Logs proxy endpoints (proxied to Erlang agent)
+	r.Get("/logs", m.logProxy.ListLogsHandler)
+	r.Post("/logs", m.logProxy.AppendLogHandler)
 
 	return r
 }
@@ -61,6 +69,16 @@ func (m *Module) AgentRoutes() http.Handler {
 		m.limit(m.rateLimiters.Result),
 		authmw.RequireAgent(m.Verifier()),
 	).Post("/check-results", m.handler.IngestCheckResult)
+
+	r.With(
+		m.limit(m.rateLimiters.Result),
+		authmw.RequireAgent(m.Verifier()),
+	).Post("/logs", m.handler.IngestAgentLog)
+
+	r.With(
+		m.limit(m.rateLimiters.Result),
+		authmw.RequireAgent(m.Verifier()),
+	).Post("/system-metrics", m.handler.IngestSystemMetrics)
 
 	return r
 }

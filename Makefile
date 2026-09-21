@@ -73,7 +73,7 @@ run-frontend: ## Start the frontend dev server when the frontend directory exist
 		echo "frontend directory not found: $(FRONTEND_DIR)"; \
 		exit 1; \
 	fi
-	cd $(FRONTEND_DIR) && npm run dev
+	cd $(FRONTEND_DIR) && unset PORT && npm run dev
 
 .PHONY: test-server
 test-server: ## Run all Go backend tests.
@@ -192,7 +192,7 @@ compose-ps: ## Show containers from the base Docker compose stack.
 Run-Agent: run-agent ## Alias for run-agent.
 Run-Server: run-server ## Alias for run-server.
 Run-Migrations: migrate-up ## Alias for migrate-up.
-run-frontend: run-frontend ## Alias for run-frontend.
+Run-Frontend: run-frontend ## Alias for run-frontend.
 
 .PHONY: run-test-server run-test-agent run-test-frontend
 run-test-server: test-server ## Alias for test-server.

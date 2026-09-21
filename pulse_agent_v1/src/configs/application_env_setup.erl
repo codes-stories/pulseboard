@@ -77,7 +77,7 @@ configure_kafka() ->
 %% @doc Backend sync configuration for fetching API logs.
 configure_backend_sync() ->
     ensure_env(backend_api_url, "http://localhost:8080"),
-    ensure_env(backend_sync_enabled, false),
+    ensure_env(backend_sync_enabled, true),
     ensure_env(backend_sync_interval_ms, 30000),
     ensure_env(backend_sync_batch_size, 100),
     ensure_env(backend_api_key, "").
@@ -89,18 +89,16 @@ configure_otlp() ->
     ensure_env(otel_protobuf_enabled, false).
 
 ensure_env(Key, Default) ->
-    case application:get_env(pulse_agent_v1, Key) of
-        undefined ->
-            Value = env_override(Key, Default),
-            application:set_env(pulse_agent_v1, Key, Value);
-        _ ->
-            ok
-    end.
-
-env_override(Key, Default) ->
     case os:getenv(env_var_name(Key)) of
-        false -> Default;
-        Value -> convert_env_value(Default, Value)
+        false ->
+            case application:get_env(pulse_agent_v1, Key) of
+                undefined ->
+                    application:set_env(pulse_agent_v1, Key, Default);
+                _ ->
+                    ok
+            end;
+        Value ->
+            application:set_env(pulse_agent_v1, Key, convert_env_value(Default, Value))
     end.
 
 env_var_name(Key) ->

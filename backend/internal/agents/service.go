@@ -17,6 +17,7 @@ type Config struct {
 	InstallURL         string
 	DownloadBaseURL    string
 	Version            string
+	ErlangAgentURL     string
 }
 
 type Service struct {
@@ -394,6 +395,62 @@ func (s *Service) InstallationInfo() InstallationResponse {
 		DownloadBaseURL: s.config.DownloadBaseURL,
 		Version:         s.config.Version,
 	}
+}
+
+func (s *Service) IngestAgentLog(ctx context.Context, agentID string, req AgentLogIngestRequest) (*AgentLog, error) {
+	if strings.TrimSpace(req.Message) == "" {
+		return nil, ErrInvalidInput
+	}
+
+	level := strings.TrimSpace(req.Level)
+	if level == "" {
+		level = "info"
+	}
+
+	log := &AgentLog{
+		ID:        newID(),
+		AgentID:   agentID,
+		Level:     level,
+		Message:   req.Message,
+		Context:   req.Context,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	if err := s.repository.InsertAgentLog(ctx, log); err != nil {
+		return nil, err
+	}
+
+	return log, nil
+}
+
+func (s *Service) ListAgentLogs(ctx context.Context, agentID string, limit int, cursor string) ([]AgentLog, error) {
+	return s.repository.ListAgentLogs(ctx, agentID, limit, cursor)
+}
+
+func (s *Service) ListCheckResults(ctx context.Context, monitorID string, limit int) ([]monitors.CheckResult, error) {
+	return s.repository.ListCheckResults(ctx, monitorID, limit)
+}
+
+func (s *Service) ListCheckResultsByAgent(ctx context.Context, agentID string, limit int) ([]monitors.CheckResult, error) {
+	return s.repository.ListCheckResultsByAgent(ctx, agentID, limit)
+}
+
+func (s *Service) IngestSystemMetrics(ctx context.Context, agentID string, req SystemMetricsIngestRequest) error {
+	if req.Metrics == nil {
+		return ErrInvalidInput
+	}
+
+	now := time.Now().UTC()
+	collectedAt := req.CollectedAt
+	if collectedAt.IsZero() {
+		collectedAt = now
+	}
+
+	return s.repository.InsertSystemMetrics(ctx, newID(), agentID, req.Metrics, collectedAt, now)
+}
+
+func (s *Service) ListSystemMetrics(ctx context.Context, agentID string, limit int) ([]SystemMetricsResponse, error) {
+	return s.repository.ListSystemMetrics(ctx, agentID, limit)
 }
 
 func toAgentResponse(agent *Agent) *AgentResponse {

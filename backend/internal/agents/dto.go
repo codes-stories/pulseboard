@@ -115,6 +115,58 @@ type InstallationResponse struct {
 	Version         string `json:"version"`
 }
 
+type AgentLogIngestRequest struct {
+	Level   string                 `json:"level"`
+	Message string                 `json:"message"`
+	Context map[string]interface{} `json:"context,omitempty"`
+}
+
+type AgentLogResponse struct {
+	ID        string                 `json:"id"`
+	AgentID   string                 `json:"agent_id"`
+	Level     string                 `json:"level"`
+	Message   string                 `json:"message"`
+	Context   map[string]interface{} `json:"context"`
+	CreatedAt time.Time              `json:"created_at"`
+}
+
+type AgentLogsResponse struct {
+	Logs []AgentLogResponse `json:"logs"`
+}
+
+type CheckResultResponse struct {
+	ID           string    `json:"id"`
+	MonitorID    string    `json:"monitor_id"`
+	AgentID      string    `json:"agent_id"`
+	StatusCode   int       `json:"status_code"`
+	LatencyMS    int       `json:"latency_ms"`
+	Success      bool      `json:"success"`
+	ErrorMessage string    `json:"error_message"`
+	CheckedAt    time.Time `json:"checked_at"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+type CheckResultsResponse struct {
+	Results []CheckResultResponse `json:"results"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
+}
+
+type SystemMetricsIngestRequest struct {
+	Metrics     map[string]interface{} `json:"metrics"`
+	CollectedAt time.Time              `json:"collected_at"`
+}
+
+type SystemMetricsResponse struct {
+	ID          string                 `json:"id"`
+	AgentID     string                 `json:"agent_id"`
+	Metrics     map[string]interface{} `json:"metrics"`
+	CollectedAt time.Time              `json:"collected_at"`
+	CreatedAt   time.Time              `json:"created_at"`
+}
+
+type SystemMetricsListResponse struct {
+	Metrics []SystemMetricsResponse `json:"metrics"`
 }

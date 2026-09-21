@@ -9,6 +9,8 @@
 main(Args) ->
     io:setopts(standard_io, [{encoding, unicode}]),
     case Args of
+        ["enroll", Token] -> enroll(Token);
+        ["enroll", "--token", Token] -> enroll(Token);
         ["login", "--token", Token] -> login(Token);
         ["login", "--api-key", ApiKey] -> login(ApiKey);
         ["login", "--apikey", ApiKey] -> login(ApiKey);
@@ -21,6 +23,62 @@ main(Args) ->
 %% ===========================================================================
 %% Commands
 %% ===========================================================================
+
+enroll(Token) ->
+    print_banner(),
+    BackendUrl = get_env_or_default("PULSE_BACKEND_API_URL", "http://localhost:8080"),
+    EnrollUrl = BackendUrl ++ "/api/v1/agent/enroll",
+
+    io:format("~ts ~ts...~n", [cyan("  Enrolling with"), EnrollUrl]),
+    ensure_inets_started(),
+
+    Hostname = get_hostname(),
+    DeviceId = get_device_id(),
+
+    Payload = jiffy:encode(#{
+        <<"enrollment_token">> => list_to_binary(Token),
+        <<"hostname">> => list_to_binary(Hostname),
+        <<"device_id">> => list_to_binary(DeviceId),
+        <<"version">> => <<"0.1.0">>
+    }),
+
+    Headers = [{"content-type", "application/json"}],
+    case httpc:request(post, {EnrollUrl, Headers, "application/json", Payload}, [], [{sync, true}]) of
+        {ok, {{_, 200, _}, _, Body}} ->
+            case jiffy:decode(list_to_binary(Body), [return_maps]) of
+                #{<<"api_key">> := #{<<"key">> := ApiKey}} ->
+                    case save(binary_to_list(ApiKey)) of
+                        ok ->
+                            io:format("~ts~n", [ok_line("Enrolled")]),
+                            io:format("~ts~n", [ok_line("API key saved")]),
+                            io:format("~n"),
+                            print_box(
+                                "success",
+                                [
+                                    "Enrolled successfully",
+                                    dim("api_key     ") ++ mask(binary_to_list(ApiKey)),
+                                    dim("backend     ") ++ BackendUrl
+                                ]
+                            );
+                        {error, Reason} ->
+                            io:format("~ts~n~n", [fail_line("Enrolled")]),
+                            print_box("error", ["Failed to save API key", format_error(Reason)])
+                    end;
+                _ ->
+                    io:format("~ts~n~n", [fail_line("Enrolled")]),
+                    print_box("error", ["Unexpected response from backend", binary_to_list(Body)])
+            end;
+        {ok, {{_, Status, _}, _, Body}} ->
+            io:format("~ts~n~n", [fail_line("Enrolled")]),
+            ErrorMsg = case jiffy:decode(list_to_binary(Body), [return_maps]) of
+                #{<<"error">> := Err} -> binary_to_list(Err);
+                _ -> "HTTP " ++ integer_to_list(Status)
+            end,
+            print_box("error", ["Enrollment failed", ErrorMsg]);
+        {error, Reason} ->
+            io:format("~ts~n~n", [fail_line("Enrolled")]),
+            print_box("error", ["Cannot reach backend", format_error(Reason)])
+    end.
 
 login(Credential) ->
     print_banner(),
@@ -84,6 +142,10 @@ usage() ->
         "~ts~n"
         "~n"
         "  ~ts~n"
+        "    escript pulse-agent enroll <ENROLLMENT_TOKEN>~n"
+        "    escript pulse-agent enroll --token <ENROLLMENT_TOKEN>~n"
+        "~n"
+        "  ~ts~n"
         "    escript pulse-agent login <TOKEN>~n"
         "    escript pulse-agent login --token <TOKEN>~n"
         "    escript pulse-agent login --api-key <API_KEY>~n"
@@ -97,8 +159,9 @@ usage() ->
         "  ~ts~n"
         "    Set PULSE_AGENT_API_URL=http://host:port to require the~n"
         "    agent server to be reachable before login.~n"
+        "    Set PULSE_BACKEND_API_URL=http://host:port for enrollment.~n"
         "~n",
-        [bold("USAGE"), dim("Login"), dim("Status"), dim("Logout"), dim("Server check (optional)")]
+        [bold("USAGE"), dim("Enroll"), dim("Login"), dim("Status"), dim("Logout"), dim("Environment variables")]
     ).
 
 %% ===========================================================================
@@ -188,6 +251,26 @@ ensure_inets_started() ->
 health_url(BaseUrl) ->
     CleanBase = string:trim(BaseUrl, trailing, "/"),
     CleanBase ++ "/api/v1/health".
+
+get_env_or_default(Var, Default) ->
+    case os:getenv(Var) of
+        false -> Default;
+        Val -> Val
+    end.
+
+get_hostname() ->
+    case os:getenv("HOSTNAME") of
+        false ->
+            case os:cmd("hostname 2>/dev/null || echo unknown") of
+                Str -> string:trim(Str)
+            end;
+        Val -> Val
+    end.
+
+get_device_id() ->
+    case os:cmd("cat /etc/machine-id 2>/dev/null || cat /var/lib/dbus/machine-id 2>/dev/null || echo unknown") of
+        Str -> string:trim(Str)
+    end.
 
 %% ===========================================================================
 %% Terminal styling (colors, banner, spinner, boxes)

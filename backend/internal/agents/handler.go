@@ -11,11 +11,12 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	service  *Service
+	logProxy *LogProxyService
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, logProxy *LogProxyService) *Handler {
+	return &Handler{service: service, logProxy: logProxy}
 }
 
 // ---- User-facing handlers ----
@@ -456,6 +457,200 @@ func (h *Handler) IngestCheckResult(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// @Summary Ingest an agent log
+// @Tags Agent API
+// @Description Submit a log entry from the agent to be stored in the backend.
+// @Security AgentAuth
+// @Accept json
+// @Produce json
+// @Param request body agents.AgentLogIngestRequest true "Log entry"
+// @Success 201 {object} agents.AgentLogResponse
+// @Failure 400 {object} agents.ErrorResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agent/logs [post]
+func (h *Handler) IngestAgentLog(w http.ResponseWriter, r *http.Request) {
+	agent, ok := authmw.AgentFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "invalid agent credentials")
+		return
+	}
+
+	var req AgentLogIngestRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	log, err := h.service.IngestAgentLog(r.Context(), agent.AgentID, req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, log)
+}
+
+// @Summary List agent logs
+// @Tags Agent API
+// @Description List logs for a specific agent.
+// @Security BearerAuth
+// @Produce json
+// @Param agentID path string true "Agent ID"
+// @Param limit query int false "Max results (default 100)"
+// @Param cursor query string false "Cursor for pagination"
+// @Success 200 {object} agents.AgentLogsResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agents/{agentID}/logs [get]
+func (h *Handler) ListAgentLogs(w http.ResponseWriter, r *http.Request) {
+	user, ok := authmw.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	agentID := chi.URLParam(r, "agentID")
+	if _, err := h.service.GetAgent(r.Context(), user.ID, agentID); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	limit := 100
+	cursor := r.URL.Query().Get("cursor")
+
+	logs, err := h.service.ListAgentLogs(r.Context(), agentID, limit, cursor)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	resp := make([]AgentLogResponse, 0, len(logs))
+	for _, l := range logs {
+		resp = append(resp, AgentLogResponse{
+			ID:        l.ID,
+			AgentID:   l.AgentID,
+			Level:     l.Level,
+			Message:   l.Message,
+			Context:   l.Context,
+			CreatedAt: l.CreatedAt,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, AgentLogsResponse{Logs: resp})
+}
+
+// @Summary List check results for an agent
+// @Tags Agent API
+// @Description List check results submitted by a specific agent.
+// @Security BearerAuth
+// @Produce json
+// @Param agentID path string true "Agent ID"
+// @Param limit query int false "Max results (default 100)"
+// @Success 200 {object} agents.CheckResultsResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agents/{agentID}/results [get]
+func (h *Handler) ListAgentCheckResults(w http.ResponseWriter, r *http.Request) {
+	user, ok := authmw.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	agentID := chi.URLParam(r, "agentID")
+	if _, err := h.service.GetAgent(r.Context(), user.ID, agentID); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	limit := 100
+	results, err := h.service.ListCheckResultsByAgent(r.Context(), agentID, limit)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	resp := make([]CheckResultResponse, 0, len(results))
+	for _, r := range results {
+		resp = append(resp, CheckResultResponse{
+			ID:           r.ID,
+			MonitorID:    r.MonitorID,
+			AgentID:      r.AgentID,
+			StatusCode:   r.StatusCode,
+			LatencyMS:    r.LatencyMS,
+			Success:      r.Success,
+			ErrorMessage: r.ErrorMessage,
+			CheckedAt:    r.CheckedAt,
+			CreatedAt:    r.CreatedAt,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, CheckResultsResponse{Results: resp})
+}
+
+// @Summary Ingest system metrics from agent
+// @Tags Agent API
+// @Description Submit system metrics (scraped from Go backend) to be stored.
+// @Security AgentAuth
+// @Accept json
+// @Produce json
+// @Param request body agents.SystemMetricsIngestRequest true "System metrics"
+// @Success 204
+// @Failure 400 {object} agents.ErrorResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agent/system-metrics [post]
+func (h *Handler) IngestSystemMetrics(w http.ResponseWriter, r *http.Request) {
+	agent, ok := authmw.AgentFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "invalid agent credentials")
+		return
+	}
+
+	var req SystemMetricsIngestRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.service.IngestSystemMetrics(r.Context(), agent.AgentID, req); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// @Summary List system metrics for an agent
+// @Tags Agents
+// @Description List system metrics collected for a specific agent.
+// @Security BearerAuth
+// @Produce json
+// @Param agentID path string true "Agent ID"
+// @Param limit query int false "Max results (default 100)"
+// @Success 200 {object} agents.SystemMetricsListResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /agents/{agentID}/system-metrics [get]
+func (h *Handler) ListSystemMetrics(w http.ResponseWriter, r *http.Request) {
+	user, ok := authmw.UserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	agentID := chi.URLParam(r, "agentID")
+	if _, err := h.service.GetAgent(r.Context(), user.ID, agentID); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	limit := 100
+	metrics, err := h.service.ListSystemMetrics(r.Context(), agentID, limit)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, SystemMetricsListResponse{Metrics: metrics})
+}
+
 // ---- helpers ----
 
 func decodeJSON(r *http.Request, dst any) error {
@@ -493,4 +688,60 @@ func writeServiceError(w http.ResponseWriter, err error) {
 	default:
 		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
+}
+
+// =========================================================================
+// Logs Proxy Handlers (proxied to Erlang agent)
+// =========================================================================
+
+// @Summary List logs from Erlang agent
+// @Tags Logs
+// @Description List logs from the Erlang agent
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} agents.LogsResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Failure 500 {object} agents.ErrorResponse
+// @Router /logs [get]
+func (h *Handler) ListLogsHandler(w http.ResponseWriter, r *http.Request) {
+	logs, err := h.logProxy.ListLogs(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "failed to fetch logs from agent")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "ok",
+		"logs":   logs,
+	})
+}
+
+// @Summary Append log to Erlang agent
+// @Tags Logs
+// @Description Append a log entry to the Erlang agent
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body agents.AppendLogRequest true "Log entry"
+// @Success 201 {object} agents.AppendLogResponse
+// @Failure 400 {object} agents.ErrorResponse
+// @Failure 401 {object} agents.ErrorResponse
+// @Router /logs [post]
+func (h *Handler) AppendLogHandler(w http.ResponseWriter, r *http.Request) {
+	var req AppendLogRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	log, err := h.logProxy.AppendLog(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "failed to append log to agent")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"status": "ok",
+		"action": "log",
+		"log":    log,
+	})
 }
