@@ -35,6 +35,7 @@ export interface RequestState {
   auth: AuthState;
   cookies: KVRow[];
   body: BodyState;
+  allowPrivate: boolean;
 }
 
 export interface HistoryEntry {

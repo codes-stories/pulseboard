@@ -24,6 +24,8 @@ import { dashboardAlerts, dashboardMetrics, incidentTimeline, statusPages, analy
 import { CardGrid, GlassCard, InlineChart, StatCard } from "./pulseboard-ui";
 import { ThemeToggle } from "../design-system/theme/theme-toggle";
 import { useAuth } from "./auth-provider";
+import { OnboardingWizard } from "./onboarding-wizard";
+import { NotificationsBell } from "./notifications-bell";
 
 const sidebarLinks = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -89,6 +91,7 @@ export function DashboardShell({ children }: Readonly<{ children: ReactNode }>) 
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <NotificationsBell />
           {user ? (
             <>
               <span className="hidden text-sm text-[color:var(--nav-muted)] sm:block">Hello, {user.name.split(" ")[0]}</span>
@@ -137,6 +140,7 @@ export function DashboardOverview() {
   const agentsQuery = useQuery({ queryKey: ["agents"], queryFn: api.listAgents });
   const agents = agentsQuery.data ?? [];
   const { user } = useAuth();
+  const hasNoAgents = !agentsQuery.isLoading && agents.length === 0;
 
   return (
     <div className="space-y-5">
@@ -148,14 +152,20 @@ export function DashboardOverview() {
         <Link href="/dashboard/agents" className="btn btn-secondary">Manage agents</Link>
       </div>
 
-      <CardGrid columns={4}>
-        {dashboardMetrics.map((metric) => <StatCard key={metric.label} {...metric} />)}
-      </CardGrid>
+      {hasNoAgents ? (
+        <OnboardingWizard installation={undefined} />
+      ) : (
+        <>
+          <CardGrid columns={4}>
+            {dashboardMetrics.map((metric) => <StatCard key={metric.label} {...metric} />)}
+          </CardGrid>
 
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <InlineChart title="Latency" value="182ms" rows={[48, 52, 61, 58, 72, 75, 69, 80, 86, 74, 68, 78]} />
-        <InlineChart title="Availability" value="99.97%" rows={[82, 84, 83, 91, 90, 94, 92, 93, 95, 97, 98, 99]} accent="from-emerald-500/15 to-emerald-500/5" />
-      </div>
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <InlineChart title="Latency" value="182ms" rows={[48, 52, 61, 58, 72, 75, 69, 80, 86, 74, 68, 78]} />
+            <InlineChart title="Availability" value="99.97%" rows={[82, 84, 83, 91, 90, 94, 92, 93, 95, 97, 98, 99]} accent="from-emerald-500/15 to-emerald-500/5" />
+          </div>
+        </>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <GlassCard className="lg:col-span-2">
@@ -199,7 +209,7 @@ export function DashboardOverview() {
             {agentsQuery.isLoading ? (
               <div className="skeleton h-16 rounded-md" />
             ) : agents.length === 0 ? (
-              <p className="rounded-md border border-[color:var(--border)] px-4 py-6 text-center text-sm text-[color:var(--muted)]">
+              <p className="rounded-md border border-dashed border-[color:var(--border)] px-4 py-8 text-center text-sm text-[color:var(--muted)]">
                 No agents installed yet.
               </p>
             ) : (

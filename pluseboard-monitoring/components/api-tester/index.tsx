@@ -35,9 +35,27 @@ const STORAGE_HISTORY_OPEN = "pb-api-historyopen";
 type ResponseTab = "body" | "headers" | "cookies" | "raw" | "preview";
 
 function message(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
+  if (error instanceof ApiError) {
+    const msg = error.message;
+    if (msg.includes("unsafe target") || msg.includes("private") || msg.includes("loopback")) {
+      return "Target is a private/local address. The proxy blocks requests to private IPs by default for security. To test local APIs, use a tunnel (ngrok, Cloudflare Tunnel) or enable Allow Private in your backend config (APITEST_ALLOW_PRIVATE=true).";
+    }
+    if (msg.includes("timed out") || msg.includes("timeout")) {
+      return "Request timed out. The target server may be unreachable or responding slowly. Check the URL and try again.";
+    }
+    if (msg.includes("connection refused") || msg.includes("connect")) {
+      return "Connection refused. The target server may not be running or the port may be incorrect.";
+    }
+    if (msg.includes("no such host") || msg.includes("lookup")) {
+      return "DNS resolution failed. The hostname could not be resolved. Check the URL for typos.";
+    }
+    if (msg.includes("certificate") || msg.includes("tls") || msg.includes("ssl")) {
+      return "TLS certificate error. The target server may have an invalid or self-signed certificate.";
+    }
+    return msg;
+  }
   if (error instanceof TypeError) {
-    return "Network error: could not reach the server. The server may be offline, or the request was blocked by the browser (CORS).";
+    return "Could not reach the PulseBoard backend. Check that NEXT_PUBLIC_API_URL is set correctly and the backend is running. If you're testing a local API, the backend must be able to reach it (use a tunnel for localhost).";
   }
   return "Something went wrong. Please try again.";
 }

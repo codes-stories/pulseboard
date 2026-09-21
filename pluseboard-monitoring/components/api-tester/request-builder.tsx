@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Braces, Check, Copy, Eraser, Eye, EyeOff, Loader2, Plus, Send, Wand2, X } from "lucide-react";
+import { Braces, Check, Copy, Eraser, Eye, EyeOff, Loader2, Plus, Send, Shield, Wand2, X } from "lucide-react";
 import type { AuthState, BodyState, BodyType, KVRow, RequestState } from "./workspace-types";
-import { COMMON_HEADERS, METHODS, SEND_SHORTCUT, emptyKV, methodText, prettyJSON, classifyTarget } from "./helpers";
+import { COMMON_HEADERS, METHODS, SEND_SHORTCUT, emptyKV, methodText, prettyJSON, classifyTarget, targetHint, targetActionHint, type TargetType } from "./helpers";
 import { KeyValueTable } from "./key-value-table";
 import { CookieEditor } from "./cookie-editor";
 import { LineEditor } from "./line-editor";
@@ -99,6 +99,36 @@ export function RequestBuilder({
           <span className="kbd hidden lg:inline-flex">{SEND_SHORTCUT}</span>
         </button>
       </div>
+
+      {isInternalTarget ? (
+        <div className="flex items-start gap-2.5 border-b border-[color:rgba(217,119,6,0.2)] bg-[color:rgba(217,119,6,0.06)] px-3 py-2.5">
+          <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-[color:#d97706]" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.78rem] font-medium text-[color:var(--text)]">
+              {targetType === "local" ? "Local target detected" : targetType === "private" ? "Private network target" : "Metadata endpoint"}
+            </p>
+            <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[color:var(--muted)]">
+              {targetHint[targetType]}
+            </p>
+            {targetActionHint[targetType] ? (
+              <p className="mt-1 text-[0.72rem] leading-relaxed text-[color:#d97706]">
+                {targetActionHint[targetType]}
+              </p>
+            ) : null}
+            {targetType !== "metadata" ? (
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-[0.72rem] text-[color:var(--muted)]">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 rounded border-[color:var(--border)] accent-[color:var(--primary)]"
+                  checked={request.allowPrivate}
+                  onChange={(event) => update({ allowPrivate: event.target.checked })}
+                />
+                Allow Private — send request through the backend proxy to private/local targets
+              </label>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {sendError ? (
         <div className="flex items-start justify-between gap-2 border-b border-[color:var(--border)] bg-[color:var(--danger)]/10 px-3 py-2">

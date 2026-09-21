@@ -142,12 +142,45 @@ select {
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.glass-panel:hover {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  border-color: rgba(240,136,4,0.25);
 }
 
 .subtle-panel {
   border: 1px solid var(--border);
   background: var(--card-soft);
   border-radius: var(--radius);
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out both;
 }
 
 .section-kicker {
@@ -767,4 +800,83 @@ select {
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 40;
+}
+
+/* ---------- Documentation page ---------- */
+
+.docs-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.docs-topbar {
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+}
+
+.docs-sidebar {
+  scrollbar-width: thin;
+}
+
+.docs-sidebar-link-active {
+  position: relative;
+}
+
+.docs-sidebar-link-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.docs-section h2 {
+  scroll-margin-top: 80px;
+}
+
+.docs-section h3 {
+  scroll-margin-top: 80px;
+}
+
+.docs-step:last-child .docs-step-line {
+  display: none;
+}
+
+.docs-code-block pre {
+  margin: 0;
+}
+
+.docs-content {
+  scrollbar-width: thin;
+}
+
+.docs-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.docs-content::-webkit-scrollbar-thumb {
+  background: rgba(127, 132, 134, 0.2);
+  border-radius: 999px;
+}
+
+.docs-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(127, 132, 134, 0.4);
+}
+
+@media (max-width: 1024px) {
+  .docs-sidebar {
+    width: 260px;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@media (max-width: 640px) {
+  .docs-content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }

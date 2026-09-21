@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -85,7 +86,7 @@ func routes(pool *pgxpool.Pool, cfg *config.Config) http.Handler {
 	r.Use(middleware.Logger) // in production, use a more sophisticated logging middleware
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{fallback(os.Getenv("CORS_ALLOWED_ORIGIN"), "http://localhost:3000")},
+		AllowedOrigins:   splitAndTrim(fallback(os.Getenv("CORS_ALLOWED_ORIGIN"), "http://localhost:3000")),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -174,6 +175,19 @@ func fallback(value string, defaultValue string) string {
 	}
 
 	return value
+}
+
+// splitAndTrim splits a comma-separated string into trimmed items.
+func splitAndTrim(s string) []string {
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 func runMigrations(pool *pgxpool.Pool) error {

@@ -63,6 +63,7 @@ export const defaultRequest: RequestState = {
     type: "json",
     text: '{\n  "title": "Hello PulseBoard",\n  "body": "testing the api tester",\n  "userId": 1\n}',
   },
+  allowPrivate: false,
 };
 
 export const SEND_SHORTCUT: string =
@@ -267,7 +268,7 @@ export interface BuiltRequest {
   body?: unknown;
 }
 
-export function buildProxyRequest(request: RequestState): BuiltRequest {
+export function buildProxyRequest(request: RequestState): BuiltRequest & { allow_private: boolean } {
   const headers = headersObject(request.headers);
   const cookie = cookieHeader(request.cookies);
   const { headers: authHeaders, url } = applyAuth(request.auth, applyPathParams(request.url, request.pathParams));
@@ -282,6 +283,7 @@ export function buildProxyRequest(request: RequestState): BuiltRequest {
       ...(cookie ? { Cookie: cookie } : {}),
     },
     body,
+    allow_private: request.allowPrivate,
   };
 }
 
@@ -314,10 +316,17 @@ export const targetTone: Record<TargetType, string> = {
 };
 
 export const targetHint: Record<TargetType, string> = {
-  local: "Local address (localhost or loopback) — e.g. an API running on this machine.",
-  private: "Private network address (RFC1918 / link-local). Only reachable through the PulseBoard proxy.",
+  local: "Local address (localhost or loopback). Requires a tunnel (e.g. ngrok) or Allow Private enabled to test from the cloud proxy.",
+  private: "Private network address (RFC1918 / link-local). Requires Allow Private enabled or a tunnel to test from the cloud proxy.",
   metadata: "Cloud metadata endpoint. Blocked for security, even when local targets are allowed.",
   public: "Public internet address.",
+};
+
+export const targetActionHint: Record<TargetType, string> = {
+  local: "To test localhost APIs from the deployed proxy, use a tunnel like ngrok or Cloudflare Tunnel to expose your local service.",
+  private: "Enable Allow Private in the proxy settings, or use a tunnel to expose the service publicly.",
+  metadata: "This endpoint is blocked for security reasons and cannot be tested.",
+  public: "",
 };
 
 function parseIPv4(host: string): number[] | null {

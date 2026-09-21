@@ -1,14 +1,16 @@
-import { AppFrame, SiteFooter, SiteHeader } from "../../components/site-shell";
-import { DocsPage } from "../../components/marketing-pages";
+import { AppFrame } from "../../components/site-shell";
+import { DocsPageComponent } from "../../components/docs-page";
+
+export const metadata = {
+  title: "Documentation — PulseBoard",
+  description:
+    "Learn how to install, configure, and operate PulseBoard agents and monitors.",
+};
 
 export default function DocsRoute() {
   return (
     <AppFrame>
-      <SiteHeader />
-      <main className="page-shell">
-        <DocsPage />
-      </main>
-      <SiteFooter />
+      <DocsPageComponent />
     </AppFrame>
   );
 }
