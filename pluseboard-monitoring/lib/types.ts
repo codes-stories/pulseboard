@@ -205,3 +205,14 @@ export interface SystemMetric {
   collected_at: string;
   created_at: string;
 }
+
+// ---- Notifications ----
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: "success" | "warning" | "error" | "info";
+  read: boolean;
+  created_at: string;
+}
